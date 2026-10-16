@@ -42,9 +42,11 @@ export const vehicleData: Record<string, Record<string, string[]>> = {
 };
 
 export const seedFitments: Fitment[] = [
-  { id:'FIT-101', year:'2023', make:'Toyota', model:'Corolla', trim:'LE', body:'Sedan', market:'Demo / PK', sku:'MS-AE-240', zones:['Driver front','Driver rear','Passenger front','Passenger rear'], status:'Verified', tested:'Oct 02, 2026', revision:2, geometry:'GEO-CRL-02', notes:'Apply only to compatible clean metal door-frame areas. Windshield not supported.', exclusions:'Windshield; direct glass mounting', history:[{revision:1,date:'Sep 18, 2026',note:'Initial front-pair demo record.'},{revision:2,date:'Oct 02, 2026',note:'Rear door coverage added to sample record.'}] },
+  { id:'FIT-101', year:'2023', make:'Toyota', model:'Corolla', trim:'LE', body:'Sedan', market:'Demo / PK', sku:'MS-AE-240', zones:['Driver front','Driver rear','Passenger front','Passenger rear','Windshield'], status:'Verified', tested:'Oct 16, 2026', revision:3, geometry:'GEO-CRL-03', notes:'Apply only to compatible clean metal door-frame and exterior windshield-perimeter points. Never attach directly to glass.', exclusions:'Direct glass mounting; operation of moving windows while shades are installed', history:[{revision:1,date:'Sep 18, 2026',note:'Initial front-pair demo record.'},{revision:2,date:'Oct 02, 2026',note:'Rear door coverage added to sample record.'},{revision:3,date:'Oct 16, 2026',note:'Added illustrative windshield coverage at compatible exterior metal perimeter points only.',status:'Verified',zones:['Driver front','Driver rear','Passenger front','Passenger rear','Windshield']}] },
   { id:'FIT-102', year:'2022', make:'Ford', model:'F-150', trim:'XLT', body:'Crew Cab', market:'Demo / PK', sku:'MS-AE-240', zones:['Driver front','Passenger front'], status:'Needs Confirmation', tested:'Sep 28, 2026', revision:1, geometry:'GEO-F150-01', notes:'Manual review required for body-style details.', exclusions:'Rear doors and windshield pending review', history:[{revision:1,date:'Sep 28, 2026',note:'Created as confirmation-only demo record.'}] },
   { id:'FIT-103', year:'2024', make:'Honda', model:'Civic', trim:'Touring', body:'Sedan', market:'Demo / PK', sku:'MS-AE-240', zones:[], status:'Unsupported', tested:'Sep 14, 2026', revision:1, geometry:'GEO-CVC-01', notes:'No supported shade configuration in sample records.', exclusions:'All coverage zones', history:[{revision:1,date:'Sep 14, 2026',note:'Marked unsupported for demonstration.'}] },
+  { id:'FIT-104', year:'2023', make:'Toyota', model:'Corolla', trim:'LE', body:'Sedan', market:'Demo / PK', sku:'MS-CP-118', zones:['Driver front','Passenger front'], status:'Verified', tested:'Oct 09, 2026', revision:1, geometry:'GEO-CRL-CP-01', notes:'Front-pair coverage on compatible exterior metal door-frame points only.', exclusions:'Rear doors; windshield; direct glass mounting', history:[{revision:1,date:'Oct 09, 2026',note:'Created verified City Pair sample record.',status:'Verified',zones:['Driver front','Passenger front']}] },
+  { id:'FIT-105', year:'2022', make:'Ford', model:'F-150', trim:'XLT', body:'Crew Cab', market:'Demo / PK', sku:'MS-CP-118', zones:['Driver front','Passenger front'], status:'Needs Confirmation', tested:'Oct 05, 2026', revision:1, geometry:'GEO-F150-CP-01', notes:'Body-style and exterior metal contact points require manual review.', exclusions:'Rear doors; windshield pending confirmation', history:[{revision:1,date:'Oct 05, 2026',note:'Created confirmation-only City Pair sample record.',status:'Needs Confirmation',zones:['Driver front','Passenger front']}] },
 ];
 
 export const seedOrders: DemoOrder[] = [
@@ -81,13 +83,13 @@ export type DemoState = {
 
 export function initialState(): DemoState {
   return {
-    version:4, products:structuredClone(seedProducts), fitments:structuredClone(seedFitments), orders:structuredClone(seedOrders), quotes:structuredClone(seedQuotes), artwork:structuredClone(seedArtwork),
+    version:5, products:structuredClone(seedProducts), fitments:structuredClone(seedFitments), orders:structuredClone(seedOrders), quotes:structuredClone(seedQuotes), artwork:structuredClone(seedArtwork),
     cart:[
       {id:'line-seed-1',productId:'p5',name:'Surface Prep Kit',sku:'MS-CARE-01',qty:1,price:28,meta:'Neutral finish · Standard kit',image:seedProducts[4].image},
       {id:'line-seed-2',productId:'p3',name:'Fleetmark Door Pair',sku:'MS-FM-1824',qty:1,price:126,meta:'18 × 24 in · Matte magnetic · Proof ART-638 approved',image:seedProducts[2].image},
     ],
     vehicle:{year:'2023',make:'Toyota',model:'Corolla',trim:'LE'}, shade:{zones:['Driver front','Passenger front'],mesh:'Performance mesh',edge:'Copper',view:'Driver side',zoom:1,angle:0,productSku:'MS-AE-240'},
-    sign:{size:'18 × 24 in',material:'Matte magnetic',qty:2,color:'#f5f3ee',assist:false,filename:'',proofStatus:'Awaiting Review',productType:'Fleetmark Door Pair',alignment:'Centered',assistNotes:'',requestedChanges:''}, discount:'', lastOrderId:'MS-10428',
+    sign:{size:'18 × 24 in',material:'Matte magnetic',qty:2,color:'#f5f3ee',assist:false,filename:'',proofStatus:'Awaiting Artwork',productType:'Fleetmark Door Pair',alignment:'Centered',assistNotes:'',requestedChanges:''}, discount:'', lastOrderId:'MS-10428',
     fitmentRequests:[], supportRequests:[], demoRole:'Retail customer', events:[],
   };
 }

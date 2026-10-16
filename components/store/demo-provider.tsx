@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { initialState, type CartItem, type DemoState, type Product } from '@/lib/demo-data';
 
-const STORAGE_KEY = 'magnetic-shades-demo-v4';
+const STORAGE_KEY = 'magnetic-shades-demo-v5';
 
 type DemoContextValue = {
   state: DemoState;
@@ -53,7 +53,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as DemoState;
-        if (parsed.version === 4) restored = parsed;
+        if (parsed.version === 5) restored = parsed;
       }
     } catch { /* fall back to seeded demo data */ }
     queueMicrotask(() => {

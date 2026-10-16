@@ -42,12 +42,13 @@ npm run build:next
 
 ## Seeded scenarios
 
-- Toyota Corolla 2023 LE + `MS-AE-240` → Verified
+- Toyota Corolla 2023 LE + `MS-AE-240` → Verified, including illustrative windshield coverage on compatible exterior metal perimeter points
 - Ford F-150 2022 XLT + `MS-AE-240` → Needs Confirmation
 - Honda Civic 2024 Touring + `MS-AE-240` → Unsupported
 - Discount code: `DEMO10`
 - Order lookup references: `MS-10428` and `MS-10396`
 - Checkout supports successful and unsuccessful demo outcomes and never collects card credentials
+- Artwork moves through upload, proof request, revision/approval and checkout or quotation gates
 
 ## Deployment
 
