@@ -1,50 +1,78 @@
 # Magnetic Shades
 
-A presentation-ready automotive eCommerce prototype built with Next.js App Router, React, TypeScript, Tailwind CSS, shadcn/ui primitives, Lucide icons and Recharts.
+Magnetic Shades is a presentation-ready automotive eCommerce prototype built with Next.js App Router, React, TypeScript, Tailwind CSS, shadcn/ui primitives, Three.js and Recharts. It demonstrates store-first shopping, vehicle fitment, an interactive 3D shade configurator, custom magnetic-sign proofing, simulated checkout and connected admin workflows.
 
-## Run locally
+## Local development
 
-1. Install dependencies with `npm install`.
-2. Start the development server with `npm run dev`.
-3. Open the local URL printed by the server.
+Requirements: Node.js 22.13 or newer and npm.
 
-## Main demonstration routes
+```bash
+npm ci
+npm run dev
+```
 
-- `/` — premium storefront
-- `/shop` — searchable, filterable product collection
-- `/configure/vehicle` — vehicle selection
-- `/configure/vehicle/preview` — interactive 2D vehicle configurator fallback
-- `/configure/fitment-result` — Verified, Needs Confirmation and Unsupported states
-- `/custom-signs/design` — magnetic sign studio
-- `/custom-signs/artwork` — artwork upload and proof review
-- `/cart`, `/checkout`, `/orders/status` — commerce and customer support flows
-- `/admin` — admin overview
-- `/admin/products`, `/admin/orders`, `/admin/quotes-artwork`, `/admin/fitments`, `/admin/analytics` — management modules
+Use the local URL printed by the development server. All prototype data is browser-local and can be restored from **Admin → Settings → Reset demo data**.
 
-## Seeded workflows
+## Validation
 
-- Toyota Corolla 2023 LE → Verified demo shade fitment
-- Ford F-150 2022 XLT → Needs Confirmation
-- Honda Civic 2024 Touring → Unsupported
-- Use discount code `DEMO10` in the cart
-- Checkout can simulate successful or unsuccessful payment without collecting card details
-- Order references `MS-10428` and `MS-10396` are available in Order Status
+```bash
+npm run typecheck
+npm run lint
+npm run build
+npm run build:next
+```
 
-## Admin demo and reset
+`npm run build` validates the Sites/Vinext target. `npm run build:next` validates the native Next.js output used by Vercel. GitHub Actions runs type checking, lint and the native Next.js production build on pushes and pull requests.
 
-Open `/login` and choose Administrator, or go directly to `/admin`. Use `/admin/settings` to restore seeded products, fitments, orders, quotes, artwork, cart and analytics.
+## Main routes
 
-## Vehicle preview
+- `/` — premium storefront and category paths
+- `/shop` — search, filters, sorting and active filter chips
+- `/collections/vehicle-shades`, `/collections/magnetic-signs`, `/collections/future-products`
+- `/products/[slug]` — gallery, variants, quantity, eligibility and related products
+- `/configure/vehicle` — Year/Make/Model/Trim selection
+- `/configure/vehicle/preview` — interactive Three.js vehicle preview with a labeled SVG fallback
+- `/configure/fitment-result` — Verified, Needs Confirmation and Unsupported outcomes
+- `/configure/fitment-request` — persisted manual-review request
+- `/custom-signs/design` and `/custom-signs/artwork` — sign setup, upload validation and proof actions
+- `/cart`, `/checkout`, `/orders/status` — multi-item commerce, simulated payment and order support
+- `/quote/request`, `/contact`, `/faq`, `/installation-care`, `/policies`
+- `/demo-access` — persistent browser-local role selector
+- `/admin` plus products, orders, quotes/artwork, fitments, analytics and settings modules
 
-The configurator uses an original interactive SVG-based 2D vehicle fallback. It supports rotation, zoom, reset, predefined views and live shade coverage overlays. Every preview is labeled illustrative.
+## Seeded scenarios
 
-## Simulated functionality
+- Toyota Corolla 2023 LE + `MS-AE-240` → Verified
+- Ford F-150 2022 XLT + `MS-AE-240` → Needs Confirmation
+- Honda Civic 2024 Touring + `MS-AE-240` → Unsupported
+- Discount code: `DEMO10`
+- Order lookup references: `MS-10428` and `MS-10396`
+- Checkout supports successful and unsuccessful demo outcomes and never collects card credentials
 
-All authentication, product data, vehicle fitments, cart persistence, payments, quotes, artwork proofs, fulfillment, analytics and administration are browser-local demonstrations. No backend, production database, real payment, carrier, email, inventory, AI or commerce integration is connected. Uploaded artwork content is not persisted; only a demo filename is kept locally.
+## Deployment
 
-## Known limitations
+### GitHub
 
-- Vehicle fitment records are fabricated demo states and are not physically validated.
-- Product photos are remote editorial imagery; the 2D vehicle is an original SVG illustration.
-- Refresh persistence depends on browser localStorage.
-- The prototype does not upload files or send external notifications.
+Create an empty GitHub repository, then connect and push this existing Git history:
+
+```bash
+git remote add github https://github.com/OWNER/REPOSITORY.git
+git push -u github main
+```
+
+If `github` already exists, update it with `git remote set-url github ...`. The included `.github/workflows/ci.yml` validates every push and pull request.
+
+### Vercel
+
+Import the GitHub repository in Vercel and keep the checked-in `vercel.json`. It selects the Next.js framework, installs with `npm ci`, and runs `npm run build:next`. No environment variables are required for this browser-local prototype.
+
+You can also deploy with the Vercel CLI after signing in:
+
+```bash
+npx vercel
+npx vercel --prod
+```
+
+## Prototype boundaries
+
+Fitment records, pricing, inventory, policies, delivery dates, payments, analytics and administration are demonstration data. Uploaded artwork content is validated in the browser but is not persisted; only its filename and proof state are stored. No payment processor, database, carrier, email, production inventory or real authentication service is connected.

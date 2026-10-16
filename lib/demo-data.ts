@@ -3,17 +3,18 @@ export type Product = {
   type: string; price: number; inventory: number; status: 'Active' | 'Draft'; tag: string;
   eligibility: 'buy' | 'configure' | 'customize' | 'quote' | 'soon' | 'unavailable';
   color: string; updated: string; description: string; image: string; approvedClaims: string;
+  images?: string[]; variants?: string[]; shippingWeight?: number; shippingClass?: string; taxCategory?: string;
 };
 
 export type FitmentStatus = 'Verified' | 'Needs Confirmation' | 'Unsupported';
 export type Fitment = {
   id: string; year: string; make: string; model: string; trim: string; body: string; market: string; sku: string;
   zones: string[]; status: FitmentStatus; tested: string; revision: number; geometry: string; notes: string; exclusions: string;
-  history: { revision: number; date: string; note: string }[];
+  history: { revision: number; date: string; note: string; status?: FitmentStatus; zones?: string[] }[];
 };
 
 export type CartItem = { id: string; productId: string; name: string; sku: string; qty: number; price: number; meta: string; image: string };
-export type DemoOrder = { id: string; customer: string; email: string; date: string; total: number; payment: string; fulfillment: string; request: string; delivery: string; items: { name: string; qty: number; price: number; meta: string }[]; timeline: string[] };
+export type DemoOrder = { id: string; customer: string; email: string; shippingAddress: string; date: string; total: number; payment: string; fulfillment: string; request: string; delivery: string; items: { name: string; qty: number; price: number; meta: string }[]; timeline: string[] };
 export type Quote = { id: string; customer: string; product: string; qty: number; config: string; date: string; status: string; amount: number | null };
 export type Artwork = { id: string; customer: string; product: string; filename: string; proof: number; status: string; readiness: string };
 
@@ -47,8 +48,8 @@ export const seedFitments: Fitment[] = [
 ];
 
 export const seedOrders: DemoOrder[] = [
-  { id:'MS-10428', customer:'Amina Shah', email:'amina@example.demo', date:'Oct 15, 2026', total:356.48, payment:'Paid (demo)', fulfillment:'Preparing', request:'None', delivery:'Illustrative delivery: Oct 22–24', items:[{name:'Aero Edge Shade Kit',qty:1,price:289,meta:'2023 Toyota Corolla LE · Four-window coverage'}], timeline:['Order created','Demo payment approved','Preparing'] },
-  { id:'MS-10396', customer:'Omar Rizvi', email:'omar@example.demo', date:'Oct 12, 2026', total:154.22, payment:'Paid (demo)', fulfillment:'Packed', request:'Refund requested', delivery:'Illustrative delivery: Oct 19–21', items:[{name:'Fleetmark Door Pair',qty:1,price:126,meta:'18 × 24 in · Matte'}], timeline:['Order created','Proof approved','Packed','Refund requested'] },
+  { id:'MS-10428', customer:'Amina Shah', email:'amina@example.demo', shippingAddress:'12 Demo Avenue, Lahore, Punjab 54000, Pakistan', date:'Oct 15, 2026', total:356.48, payment:'Paid (demo)', fulfillment:'Preparing', request:'None', delivery:'Illustrative delivery: Oct 22–24', items:[{name:'Aero Edge Shade Kit',qty:1,price:289,meta:'2023 Toyota Corolla LE · Four-window coverage'}], timeline:['Order created','Demo payment approved','Preparing'] },
+  { id:'MS-10396', customer:'Omar Rizvi', email:'omar@example.demo', shippingAddress:'88 Sample Road, Karachi, Sindh 75500, Pakistan', date:'Oct 12, 2026', total:154.22, payment:'Paid (demo)', fulfillment:'Packed', request:'Refund requested', delivery:'Illustrative delivery: Oct 19–21', items:[{name:'Fleetmark Door Pair',qty:1,price:126,meta:'18 × 24 in · Matte'}], timeline:['Order created','Proof approved','Packed','Refund requested'] },
 ];
 
 export const seedQuotes: Quote[] = [
@@ -73,17 +74,20 @@ export const faqItems = [
 
 export type DemoState = {
   version:number; products:Product[]; fitments:Fitment[]; orders:DemoOrder[]; quotes:Quote[]; artwork:Artwork[]; cart:CartItem[];
-  vehicle:{year:string;make:string;model:string;trim:string}; shade:{zones:string[];mesh:string;edge:string;view:string;zoom:number;angle:number};
-  sign:{size:string;material:string;qty:number;color:string;assist:boolean;filename:string;proofStatus:string}; discount:string; lastOrderId:string;
+  vehicle:{year:string;make:string;model:string;trim:string}; shade:{zones:string[];mesh:string;edge:string;view:string;zoom:number;angle:number;productSku:string};
+  sign:{size:string;material:string;qty:number;color:string;assist:boolean;filename:string;proofStatus:string;productType:string;alignment:string;assistNotes:string;requestedChanges:string}; discount:string; lastOrderId:string;
   fitmentRequests:{id:string;customer:string;vehicle:string;status:string}[]; supportRequests:{id:string;name:string;category:string;status:string}[]; demoRole:string; events:string[];
 };
 
 export function initialState(): DemoState {
   return {
-    version:3, products:structuredClone(seedProducts), fitments:structuredClone(seedFitments), orders:structuredClone(seedOrders), quotes:structuredClone(seedQuotes), artwork:structuredClone(seedArtwork),
-    cart:[{id:'line-seed-1',productId:'p5',name:'Surface Prep Kit',sku:'MS-CARE-01',qty:1,price:28,meta:'Standard kit',image:seedProducts[4].image}],
-    vehicle:{year:'2023',make:'Toyota',model:'Corolla',trim:'LE'}, shade:{zones:['Driver front','Passenger front'],mesh:'Performance mesh',edge:'Copper',view:'Driver side',zoom:1,angle:0},
-    sign:{size:'18 × 24 in',material:'Matte magnetic',qty:2,color:'#f5f3ee',assist:false,filename:'',proofStatus:'Awaiting Review'}, discount:'', lastOrderId:'MS-10428',
+    version:4, products:structuredClone(seedProducts), fitments:structuredClone(seedFitments), orders:structuredClone(seedOrders), quotes:structuredClone(seedQuotes), artwork:structuredClone(seedArtwork),
+    cart:[
+      {id:'line-seed-1',productId:'p5',name:'Surface Prep Kit',sku:'MS-CARE-01',qty:1,price:28,meta:'Neutral finish · Standard kit',image:seedProducts[4].image},
+      {id:'line-seed-2',productId:'p3',name:'Fleetmark Door Pair',sku:'MS-FM-1824',qty:1,price:126,meta:'18 × 24 in · Matte magnetic · Proof ART-638 approved',image:seedProducts[2].image},
+    ],
+    vehicle:{year:'2023',make:'Toyota',model:'Corolla',trim:'LE'}, shade:{zones:['Driver front','Passenger front'],mesh:'Performance mesh',edge:'Copper',view:'Driver side',zoom:1,angle:0,productSku:'MS-AE-240'},
+    sign:{size:'18 × 24 in',material:'Matte magnetic',qty:2,color:'#f5f3ee',assist:false,filename:'',proofStatus:'Awaiting Review',productType:'Fleetmark Door Pair',alignment:'Centered',assistNotes:'',requestedChanges:''}, discount:'', lastOrderId:'MS-10428',
     fitmentRequests:[], supportRequests:[], demoRole:'Retail customer', events:[],
   };
 }

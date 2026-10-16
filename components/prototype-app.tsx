@@ -19,7 +19,7 @@ function RouteView(){
   }
   let page:React.ReactNode;
   if(path==='/')page=<HomePage/>;
-  else if(path==='/login')page=<LoginPage/>;
+  else if(path==='/login'||path==='/demo-access')page=<LoginPage/>;
   else if(path==='/shop')page=<ShopPage initialQuery={params.get('q')||''}/>;
   else if(path.startsWith('/collections/'))page=<CollectionPage slug={path.split('/')[2]||''}/>;
   else if(path.startsWith('/products/'))page=<ProductPage slug={path.split('/')[2]||''}/>;
@@ -38,7 +38,7 @@ function RouteView(){
   else if(path==='/installation-care')page=<InstallationPage/>;
   else if(path==='/faq')page=<FaqPage/>;
   else if(path==='/contact')page=<ContactPage/>;
-  else if(path==='/policies')page=<PoliciesPage/>;
+  else if(path==='/policies')page=<PoliciesPage initialTab={params.get('section')||'shipping'}/>;
   else page=<PageHero eyebrow="Magnetic Shades" title="That page is outside this prototype." copy="Use the navigation to return to a working customer or admin journey."/>;
   return <SiteShell>{page}</SiteShell>;
 }

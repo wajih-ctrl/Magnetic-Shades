@@ -154,7 +154,7 @@ function Scene(props: ViewerProps) {
 function Fallback({ zones, edge, angle, zoom }: Pick<ViewerProps, 'zones' | 'edge' | 'angle' | 'zoom'>) {
   return <div className="absolute inset-0 grid place-items-center">
     <CarIllustration zones={zones} edge={edge} angle={angle} zoom={zoom} className="w-[93%] drop-shadow-2xl"/>
-    <span className="absolute left-4 top-4 rounded-full bg-[#101419cc] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white">2D compatibility mode</span>
+    <span className="absolute left-4 top-4 rounded-full bg-[#101419cc] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white">Illustrative Vehicle Preview · 2D fallback</span>
   </div>;
 }
 
@@ -184,7 +184,7 @@ export function ThreeVehicleViewer(props: ViewerProps) {
       <Canvas shadows dpr={[1, 1.65]} camera={{ position: [5.4, 3.15, 5.7], fov: 34, near: .1, far: 100 }} gl={{ antialias: true, alpha: true }}>
         <Suspense fallback={null}><Scene {...props}/></Suspense>
       </Canvas>
-      <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/30 bg-[#101419d9] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white backdrop-blur">Interactive 3D</span>
+      <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/30 bg-[#101419d9] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white backdrop-blur">Illustrative Vehicle Preview · Interactive 3D</span>
       <span className="pointer-events-none absolute left-4 top-14 rounded-md bg-white/75 px-2.5 py-1 text-[10px] font-medium text-[#333b42] backdrop-blur">Drag to rotate · Scroll to zoom</span>
     </div>
   </SceneBoundary>;
