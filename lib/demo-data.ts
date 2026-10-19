@@ -13,7 +13,7 @@ export type Fitment = {
   history: { revision: number; date: string; note: string; status?: FitmentStatus; zones?: string[] }[];
 };
 
-export type CartItem = { id: string; productId: string; name: string; sku: string; qty: number; price: number; meta: string; image: string };
+export type CartItem = { id: string; productId: string; name: string; sku: string; qty: number; price: number; meta: string; image: string; shadeConfiguration?:{vehicle:DemoState['vehicle'];zones:string[];mesh:string;edge:string}; signConfiguration?:DemoState['sign'] };
 export type DemoOrder = { id: string; customer: string; email: string; shippingAddress: string; date: string; total: number; payment: string; fulfillment: string; request: string; delivery: string; items: { name: string; qty: number; price: number; meta: string }[]; timeline: string[] };
 export type Quote = { id: string; customer: string; product: string; qty: number; config: string; date: string; status: string; amount: number | null };
 export type Artwork = { id: string; customer: string; product: string; filename: string; proof: number; status: string; readiness: string };
@@ -41,6 +41,10 @@ export type VehicleOption = {
 };
 
 export const vehicleCatalog: VehicleOption[] = [
+  { year:'2026', make:'Toyota', model:'Corolla', body:'Sedan', trims:['LE','SE','XSE'], preview:'sedan' },
+  { year:'2021', make:'Toyota', model:'Camry', body:'Sedan', trims:['LE','SE','XLE'], preview:'sedan' },
+  { year:'2021', make:'Honda', model:'Accord', body:'Sedan', trims:['LX','Sport','EX-L','Touring'], preview:'sedan' },
+  { year:'2021', make:'Ford', model:'F-150', body:'Crew Cab', trims:['XL','XLT','Lariat'], preview:'truck' },
   { year:'2025', make:'Toyota', model:'Camry', body:'Sedan', trims:['LE','SE','XLE'], preview:'sedan' },
   { year:'2025', make:'Honda', model:'CR-V', body:'SUV', trims:['LX','EX','Sport-L Hybrid'], preview:'suv' },
   { year:'2025', make:'Ford', model:'F-150', body:'Crew Cab', trims:['XL','XLT','Lariat'], preview:'truck' },
@@ -98,8 +102,8 @@ export const faqItems = [
 export type DemoState = {
   version:number; products:Product[]; fitments:Fitment[]; orders:DemoOrder[]; quotes:Quote[]; artwork:Artwork[]; cart:CartItem[];
   vehicle:{year:string;make:string;model:string;body:string;trim:string}; shade:{zones:string[];mesh:string;edge:string;view:string;zoom:number;angle:number;productSku:string};
-  sign:{size:string;material:string;qty:number;color:string;assist:boolean;filename:string;proofStatus:string;productType:string;alignment:string;assistNotes:string;requestedChanges:string}; discount:string; lastOrderId:string;
-  fitmentRequests:{id:string;customer:string;vehicle:string;sku:string;coverage:string;appearance:string;status:string}[]; supportRequests:{id:string;name:string;category:string;status:string}[]; demoRole:string; events:string[];
+  sign:{artworkKey?:string;size:string;material:string;qty:number;color:string;assist:boolean;filename:string;proofStatus:string;productType:string;alignment:string;assistNotes:string;requestedChanges:string}; discount:string; lastOrderId:string;
+  fitmentRequests:{id:string;customer:string;email?:string;notes?:string;vehicle:string;sku:string;coverage:string;appearance:string;status:string}[]; supportRequests:{id:string;name:string;category:string;status:string}[]; demoRole:string; events:string[];
 };
 
 export function initialState(): DemoState {

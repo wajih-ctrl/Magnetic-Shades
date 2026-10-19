@@ -1,210 +1,136 @@
 'use client';
 
-import { Component, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { ContactShadows, OrbitControls, RoundedBox } from '@react-three/drei';
+import { ContactShadows, OrbitControls, RoundedBox, Line, Environment, Lightformer } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
-import { CarIllustration } from '@/components/car-illustration';
+import { vehicleProfile, type VehicleProfile } from '@/lib/vehicle-geometry';
+import { VehicleDiagram } from '@/components/vehicle-diagram';
 
-type ViewerProps = {
-  zones: string[];
-  edge: string;
-  mesh: string;
-  view: string;
-  zoom: number;
-  angle: number;
-  resetSignal: number;
-  vehicle: { year:string; make:string; model:string; body:string; trim:string };
-  vehicleType: 'sedan' | 'truck' | 'suv';
-};
-
-type BoundaryProps = { children: ReactNode; fallback: ReactNode };
-
-class SceneBoundary extends Component<BoundaryProps, { failed: boolean }> {
-  state = { failed: false };
-
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-
-  render() {
-    return this.state.failed ? this.props.fallback : this.props.children;
-  }
+type ViewerProps = { zones:string[]; edge:string; mesh:string; view:string; zoom:number; angle:number; resetSignal:number; vehicle:{year:string;make:string;model:string;body:string;trim:string}; vehicleType:'sedan'|'truck'|'suv' };
+class SceneBoundary extends Component<{children:ReactNode;fallback:ReactNode},{failed:boolean}> {
+  state={failed:false}; static getDerivedStateFromError(){return {failed:true};}
+  render(){return this.state.failed?this.props.fallback:this.props.children;}
 }
-
-const cameraViews: Record<string, [number, number, number]> = {
-  'Driver side': [0, 2.45, 7.2],
-  'Passenger side': [0, 2.45, -7.2],
-  Front: [7.2, 2.35, 0],
-  Rear: [-7.2, 2.35, 0],
-  'Three-quarter': [5.4, 3.15, 5.7],
-};
-
-function CameraRig({ view, zoom, resetSignal }: Pick<ViewerProps, 'view' | 'zoom' | 'resetSignal'>) {
-  const { camera } = useThree();
-  const controls = useRef<OrbitControlsImpl>(null);
-
-  useEffect(() => {
-    const position = cameraViews[view] ?? cameraViews['Three-quarter'];
-    const distanceScale = 1 / Math.max(.72, zoom);
-    camera.position.set(position[0] * distanceScale, position[1] * distanceScale, position[2] * distanceScale);
-    camera.lookAt(0, .9, 0);
-    controls.current?.target.set(0, .9, 0);
-    controls.current?.update();
-  }, [camera, resetSignal, view, zoom]);
-
-  return <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping dampingFactor={.08} minDistance={4.6} maxDistance={10.5} minPolarAngle={.55} maxPolarAngle={1.52}/>;
+const cameraViews:Record<string,[number,number,number]>={'Driver side':[0,2.5,7.8],'Passenger side':[0,2.5,-7.8],Front:[7.8,2.7,0],Rear:[-7.8,2.7,0],'Three-quarter':[5.8,3.4,6.2]};
+function CameraRig({view,zoom,resetSignal,vehicle}:ViewerProps){
+  const {camera,size}=useThree();const controls=useRef<OrbitControlsImpl>(null);
+  useEffect(()=>{const p=cameraViews[view]??cameraViews['Three-quarter'];const factor=(vehicle.model==='F-150'?1.15:1)*Math.max(1,1.2/(size.width/size.height))/zoom;camera.position.set(p[0]*factor,p[1]*factor,p[2]*factor);camera.lookAt(0,size.width<450?.55:.85,0);controls.current?.target.set(0,size.width<450?.55:.85,0);controls.current?.update();},[camera,view,zoom,resetSignal,vehicle.model,size.width,size.height]);
+  return <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping minDistance={3.7} maxDistance={19} minPolarAngle={.3} maxPolarAngle={1.54}/>;
 }
-
-function Wheel({ x, z }: { x: number; z: number }) {
-  return <group position={[x, .47, z]} rotation={[Math.PI / 2, 0, 0]}>
-    <mesh castShadow>
-      <cylinderGeometry args={[.45, .45, .3, 36]}/>
-      <meshStandardMaterial color="#101317" roughness={.8}/>
-    </mesh>
-    <mesh position={[0, .16, 0]}>
-      <cylinderGeometry args={[.24, .24, .018, 24]}/>
-      <meshStandardMaterial color="#aeb5ba" metalness={.85} roughness={.26}/>
-    </mesh>
+type Point=[number,number,number];
+function Surface({points,color,opacity=1,metalness=0,roughness=.4,crown=0}:{points:Point[];color:string;opacity?:number;metalness?:number;roughness?:number;crown?:number}){
+  const geometry=useMemo(()=>{
+    const g=new THREE.BufferGeometry(), vertices:number[]=[], indices:number[]=[];
+    const n=crown?16:1;
+    for(let i=0;i<=n;i++)for(let j=0;j<=n;j++){
+      const u=i/n,v=j/n;
+      for(let axis=0;axis<3;axis++)vertices.push((1-u)*((1-v)*points[0][axis]+v*points[1][axis])+u*((1-v)*points[3][axis]+v*points[2][axis])+(axis===1?crown*Math.sin(Math.PI*u)*Math.sin(Math.PI*v):0));
+    }
+    for(let i=0;i<n;i++)for(let j=0;j<n;j++){const a=i*(n+1)+j;indices.push(a,a+1,a+n+2,a,a+n+2,a+n+1);}
+    g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();return g;
+  },[points,crown]);
+  useEffect(()=>()=>geometry.dispose(),[geometry]);
+  return <mesh geometry={geometry} castShadow receiveShadow><meshStandardMaterial side={THREE.DoubleSide} color={color} metalness={metalness} roughness={roughness} transparent={opacity<1} opacity={opacity}/></mesh>;
+}
+function Glass({points,selected,edge,mesh}:{points:Point[];selected:boolean;edge:string;mesh:string}){
+  const middle=points.reduce((a,p)=>a.map((n,i)=>n+p[i]/4) as Point,[0,0,0] as Point);
+  const normal=new THREE.Vector3().subVectors(new THREE.Vector3(...points[1]),new THREE.Vector3(...points[0])).cross(new THREE.Vector3().subVectors(new THREE.Vector3(...points[2]),new THREE.Vector3(...points[0]))).normalize();
+  if(normal.dot(new THREE.Vector3(middle[0],0,middle[2]))<0)normal.negate();
+  const inner=points.map(p=>p.map((v,i)=>middle[i]+(v-middle[i])*.91+normal.getComponent(i)*.004) as Point);
+  const grid=useMemo(()=>{
+    const mix=(a:Point,b:Point,t:number)=>a.map((v,i)=>v+(b[i]-v)*t) as Point;
+    const lines:Point[][]=[];
+    for(let i=1;i<24;i++)lines.push([mix(inner[0],inner[1],i/24),mix(inner[3],inner[2],i/24)]);
+    for(let i=1;i<12;i++)lines.push([mix(inner[0],inner[3],i/12),mix(inner[1],inner[2],i/12)]);
+    return lines;
+  },[inner]);
+  return <group><Surface points={points} color={selected?edge:'#141c22'} roughness={.4}/><Surface points={inner} color={selected?(mesh==='Privacy mesh'?'#111a1e':'#354c53'):'#567580'} metalness={selected?.05:.55} roughness={selected?.9:.14}/>{selected&&grid.map((p,i)=><Line key={i} points={p.map(v=>v.map((n,i)=>n+normal.getComponent(i)*.004) as Point)} color={mesh==='Privacy mesh'?'#293638':'#78918e'} lineWidth={.6} transparent opacity={.65}/>)}<Line points={[...points,points[0]]} color={selected?edge:'#26343d'} lineWidth={selected?4:1.4}/></group>;
+}
+function Wheel({x,z,r}:{x:number;z:number;r:number}){
+  const side=Math.sign(z);
+  return <group position={[x,r,z]}>
+    <mesh rotation={[Math.PI/2,0,0]} castShadow><cylinderGeometry args={[r,r,.23,48]}/><meshStandardMaterial color="#16191b" roughness={.92}/></mesh>
+    <mesh position={[0,0,side*.123]}><torusGeometry args={[r*.76,r*.11,10,48]}/><meshStandardMaterial color="#101417"/></mesh>
+    <mesh rotation={[Math.PI/2,0,0]} position={[0,0,side*.14]}><cylinderGeometry args={[r*.64,r*.64,.015,36]}/><meshStandardMaterial color="#30383e" metalness={.85} roughness={.3}/></mesh>
+    {Array.from({length:10},(_,i)=><mesh key={i} position={[Math.sin(i*Math.PI/5)*r*.37,Math.cos(i*Math.PI/5)*r*.37,side*.158]} rotation={[0,0,-i*Math.PI/5]}><boxGeometry args={[r*.1,r*.52,.025]}/><meshStandardMaterial color="#ccd4da" metalness={.85} roughness={.25}/></mesh>)}
+    <mesh position={[0,0,side*.18]} rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[r*.16,r*.16,.03,20]}/><meshStandardMaterial color="#b6c0c7" metalness={.8} roughness={.25}/></mesh>
   </group>;
 }
-
-function SideWindow({ x, y=1.43, z, selected, edge, mesh, scaleX=1 }: { x: number; y?:number; z: number; selected: boolean; edge: string; mesh: string; scaleX?:number }) {
-  const outward = Math.sign(z);
-  const shadeColor=mesh==='Privacy mesh'?'#071014':'#243a40';
-  return <group position={[x, y, z]} scale={[scaleX,1,1]}>
-    <RoundedBox args={[1.02, .6, .055]} radius={.08} smoothness={4}>
-      <meshStandardMaterial color={selected ? edge : '#111a21'} metalness={.28} roughness={.42}/>
-    </RoundedBox>
-    <RoundedBox args={[.91, .49, .025]} radius={.06} smoothness={4} position={[0, 0, outward * .041]}>
-      <meshPhysicalMaterial color={selected ? shadeColor : '#243740'} transparent opacity={selected ? (mesh==='Privacy mesh'?.96:.82) : .7} roughness={selected?.62:.14} metalness={.12} transmission={selected ? 0 : .2}/>
-    </RoundedBox>
-    {selected&&<mesh position={[0,0,outward*.061]}>
-      <planeGeometry args={[.82,.4,12,7]}/>
-      <meshBasicMaterial color={edge} wireframe transparent opacity={mesh==='Privacy mesh'?.16:.28}/>
-    </mesh>}
-  </group>;
-}
-
-function Windshield({ selected, edge, mesh }: { selected: boolean; edge: string; mesh:string }) {
-  return <group position={[1.2, 1.42, 0]} rotation={[0, 0, -.3]}>
-    <RoundedBox args={[.06, .73, 1.5]} radius={.03} smoothness={4}>
-      <meshStandardMaterial color={selected ? edge : '#111a21'} metalness={.24} roughness={.4}/>
-    </RoundedBox>
-    <RoundedBox args={[.035, .62, 1.37]} radius={.025} smoothness={4} position={[.041, 0, 0]}>
-      <meshPhysicalMaterial color={selected?(mesh==='Privacy mesh'?'#071014':'#243a40'):'#19262d'} transparent opacity={selected ? .94 : .7} roughness={selected?.6:.12} transmission={selected ? 0 : .2}/>
-    </RoundedBox>
-  </group>;
-}
-
-function VehicleModel({ zones, edge, mesh, angle, vehicle, vehicleType }: Pick<ViewerProps, 'zones' | 'edge' | 'mesh' | 'angle' | 'vehicle' | 'vehicleType'>) {
-  const selected = (zone: string) => zones.includes(zone);
-  const truck=vehicleType==='truck';
-  const suv=vehicleType==='suv';
-  const bodyLength=truck?5.65:suv?5.05:4.85;
-  const bodyHeight=truck?.88:suv?.98:.72;
-  const windowY=truck?1.58:suv?1.6:1.43;
-  const bodyColor=vehicle.make==='Ford'?'#b8c2c9':vehicle.make==='Honda'?'#d8dadd':'#c7ced2';
-  return <group rotation={[0, THREE.MathUtils.degToRad(angle), 0]}>
-    <RoundedBox args={[bodyLength, bodyHeight, truck?2.05:1.88]} radius={truck?.16:.27} smoothness={6} position={[0, truck?.94:.83, 0]} castShadow receiveShadow>
-      <meshStandardMaterial color={bodyColor} metalness={.72} roughness={.25}/>
-    </RoundedBox>
-    <RoundedBox args={[truck?1.55:1.35, truck?.5:.36, truck?1.94:1.76]} radius={.18} smoothness={5} position={[truck?1.9:1.72, truck?1.28:1.12, 0]} castShadow>
-      <meshStandardMaterial color="#d6dbde" metalness={.68} roughness={.22}/>
-    </RoundedBox>
-    <RoundedBox args={[truck?2.15:suv?2.9:2.66, truck?.98:suv?1.08:.82, truck?1.84:1.68]} radius={.23} smoothness={6} position={[truck?.38:-.1, windowY, 0]} castShadow>
-      <meshStandardMaterial color="#1b2930" metalness={.48} roughness={.2}/>
-    </RoundedBox>
-    <mesh position={[truck?.35:-.15, truck?2.11:suv?2.15:1.86, 0]} castShadow>
-      <boxGeometry args={[truck?1.65:suv?2.25:2.05, .08, truck?1.68:1.53]}/>
-      <meshStandardMaterial color="#b9c1c6" metalness={.72} roughness={.24}/>
-    </mesh>
-    <SideWindow x={truck?.78:.48} y={windowY} z={truck?1.018:.858} selected={selected('Driver front')} edge={edge} mesh={mesh} scaleX={truck?.88:1}/>
-    <SideWindow x={truck?-.28:-.66} y={windowY} z={truck?1.018:.858} selected={selected('Driver rear')} edge={edge} mesh={mesh} scaleX={truck?.78:1}/>
-    <SideWindow x={truck?.78:.48} y={windowY} z={truck?-1.018:-.858} selected={selected('Passenger front')} edge={edge} mesh={mesh} scaleX={truck?.88:1}/>
-    <SideWindow x={truck?-.28:-.66} y={windowY} z={truck?-1.018:-.858} selected={selected('Passenger rear')} edge={edge} mesh={mesh} scaleX={truck?.78:1}/>
-    <Windshield selected={selected('Windshield')} edge={edge} mesh={mesh}/>
-    {truck&&<RoundedBox args={[2.18,.42,1.92]} radius={.1} smoothness={3} position={[-1.75,1.22,0]} castShadow><meshStandardMaterial color={bodyColor} metalness={.7} roughness={.28}/></RoundedBox>}
-    {truck&&<mesh position={[-1.72,1.48,0]}><boxGeometry args={[2.02,.06,1.72]}/><meshStandardMaterial color="#263139" metalness={.35} roughness={.55}/></mesh>}
-    {[-(truck?1.72:1.48), truck?1.72:1.5].flatMap(x => [-1, 1].map(z => <Wheel key={`${x}-${z}`} x={x} z={z}/>))}
-    <mesh position={[bodyLength/2, truck?1:.9, .55]}>
-      <boxGeometry args={[.035, .18, .5]}/>
-      <meshStandardMaterial color="#f3e9c8" emissive="#fff2b5" emissiveIntensity={.8}/>
-    </mesh>
-    <mesh position={[bodyLength/2, truck?1:.9, -.55]}>
-      <boxGeometry args={[.035, .18, .5]}/>
-      <meshStandardMaterial color="#f3e9c8" emissive="#fff2b5" emissiveIntensity={.8}/>
-    </mesh>
-    <mesh position={[-bodyLength/2, truck?1:.9, .55]}>
-      <boxGeometry args={[.035, .19, .43]}/>
-      <meshStandardMaterial color="#8d2528" emissive="#b73538" emissiveIntensity={.65}/>
-    </mesh>
-    <mesh position={[-bodyLength/2, truck?1:.9, -.55]}>
-      <boxGeometry args={[.035, .19, .43]}/>
-      <meshStandardMaterial color="#8d2528" emissive="#b73538" emissiveIntensity={.65}/>
-    </mesh>
-    <mesh position={[0, .48, 0]} castShadow>
-      <boxGeometry args={[bodyLength-.9, .12, truck?2.05:1.9]}/>
-      <meshStandardMaterial color="#20252a" metalness={.5} roughness={.45}/>
-    </mesh>
-    <mesh position={[0,.17,0]} rotation={[-Math.PI/2,0,0]}>
-      <planeGeometry args={[2.4,.55]}/><meshBasicMaterial color="#20252a" transparent opacity={.52}/>
-    </mesh>
-  </group>;
-}
-
-function Scene(props: ViewerProps) {
-  return <>
-    <ambientLight intensity={1.2}/>
-    <hemisphereLight intensity={1.35} color="#ffffff" groundColor="#647079"/>
-    <directionalLight castShadow intensity={3.1} position={[4, 7, 5]} shadow-mapSize-width={1024} shadow-mapSize-height={1024}/>
-    <spotLight intensity={2.1} position={[-5, 5, -4]} angle={.5} penumbra={.8}/>
-    <VehicleModel zones={props.zones} edge={props.edge} mesh={props.mesh} angle={props.angle} vehicle={props.vehicle} vehicleType={props.vehicleType}/>
-    <ContactShadows position={[0, .02, 0]} opacity={.42} scale={8} blur={2.6} far={4}/>
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.015, 0]} receiveShadow>
-      <circleGeometry args={[6.2, 64]}/>
-      <meshStandardMaterial color="#aeb5ba" transparent opacity={.18}/>
-    </mesh>
-    <CameraRig view={props.view} zoom={props.zoom} resetSignal={props.resetSignal}/>
-  </>;
-}
-
-function Fallback({ zones, edge, mesh, angle, zoom, vehicle, vehicleType }: Pick<ViewerProps, 'zones' | 'edge' | 'mesh' | 'angle' | 'zoom' | 'vehicle' | 'vehicleType'>) {
-  return <div className="absolute inset-0 grid place-items-center">
-    <CarIllustration zones={zones} edge={edge} mesh={mesh} angle={angle} zoom={zoom} vehicleType={vehicleType} label={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} className="w-[93%] drop-shadow-2xl"/>
-    <span className="absolute left-4 top-4 rounded-full bg-[#101419cc] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white">{vehicle.make} {vehicle.model} · 2D fallback</span>
-  </div>;
-}
-
-export function ThreeVehicleViewer(props: ViewerProps) {
-  const [webgl, setWebgl] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      try {
-        const canvas = document.createElement('canvas');
-        const options = { failIfMajorPerformanceCaveat: true };
-        setWebgl(Boolean(canvas.getContext('webgl2', options) || canvas.getContext('webgl', options)));
-      } catch {
-        setWebgl(false);
-      }
+function Body({p}:{p:VehicleProfile}){
+  const geometry=useMemo(()=>{
+    // Sample the shell along its length so fenders, shoulders and rocker panels
+    // have continuous curvature instead of extruding a flat side silhouette.
+    const positions:number[]=[], indices:number[]=[];
+    const nx=160, ny=20, half=p.length/2, axle=p.wheelbase/2;
+    const top=(x:number)=>p.belt-.16*Math.pow(Math.max(0,(x-p.nose)/(half-p.nose)),1.6)-.08*Math.pow(Math.max(0,(-x+p.tail)/(half+p.tail)),2);
+    const bottom=(x:number)=>{
+      const d=Math.min(Math.abs(x-axle),Math.abs(x+axle)), radius=p.radius+.065;
+      return d<radius?Math.max(.37,p.radius+Math.sqrt(radius*radius-d*d)):.37;
+    };
+    const width=(x:number,y:number)=>{
+      const end=Math.max(0,(Math.abs(x)-axle)/(half-axle));
+      const h=THREE.MathUtils.clamp((y-.37)/(p.belt-.37),0,1);
+      const shoulder=.045*Math.sin(h*Math.PI)-.055*Math.pow(1-h,3);
+      return p.width/2-.025+shoulder-(p.truck?.045:.12)*end*end;
+    };
+    const patch=(rows:number,cols:number,point:(i:number,j:number)=>Point)=>{
+      const offset=positions.length/3;
+      for(let i=0;i<=rows;i++)for(let j=0;j<=cols;j++)positions.push(...point(i/rows,j/cols));
+      for(let i=0;i<rows;i++)for(let j=0;j<cols;j++){const a=offset+i*(cols+1)+j;indices.push(a,a+1,a+cols+2,a,a+cols+2,a+cols+1);}
+    };
+    for(const side of [-1,1])patch(nx,ny,(u,v)=>{
+      const x=-half+p.length*u, lo=bottom(x), y=lo+(top(x)-lo)*v;
+      return [x,y,side*width(x,y)];
     });
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
-
-  const fallback = <Fallback zones={props.zones} edge={props.edge} mesh={props.mesh} angle={props.angle} zoom={props.zoom} vehicle={props.vehicle} vehicleType={props.vehicleType}/>;
-
-  if (webgl === false) return fallback;
-  if (webgl === null) return <div className="absolute inset-0 animate-pulse bg-white/10" aria-label="Loading interactive 3D vehicle"/>;
-
-  return <SceneBoundary fallback={fallback}>
-    <div className="absolute inset-0" role="img" aria-label="Interactive 3D vehicle and magnetic shade preview">
-      <Canvas shadows dpr={[1, 1.65]} camera={{ position: [5.4, 3.15, 5.7], fov: 34, near: .1, far: 100 }} gl={{ antialias: true, alpha: true }}>
-        <Suspense fallback={null}><Scene {...props}/></Suspense>
-      </Canvas>
-      <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/30 bg-[#101419d9] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white backdrop-blur">{props.vehicle.year} {props.vehicle.make} {props.vehicle.model} · Interactive 3D</span>
-      <span className="pointer-events-none absolute left-4 top-14 rounded-md bg-white/75 px-2.5 py-1 text-[10px] font-medium text-[#333b42] backdrop-blur">Drag to rotate · Scroll to zoom</span>
-    </div>
-  </SceneBoundary>;
+    patch(nx,24,(u,v)=>{const x=-half+p.length*u,y=top(x),z=(2*v-1)*width(x,y);return [x,y+.045*Math.sin(Math.PI*v),z];});
+    for(const x of [-half,half])patch(12,24,(u,v)=>{const y=.37+(top(x)-.37)*u;return [x,y,(2*v-1)*width(x,y)];});
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setIndex(indices);g.computeVertexNormals();return g;
+  },[p]);
+  useEffect(()=>()=>geometry.dispose(),[geometry]);
+  return <mesh geometry={geometry} castShadow receiveShadow><meshPhysicalMaterial side={THREE.DoubleSide} color={p.color} metalness={.65} roughness={.25} clearcoat={1} clearcoatRoughness={.22}/></mesh>;
+}
+function VehicleModel(props:ViewerProps){
+  const p=useMemo(()=>vehicleProfile(props.vehicle),[props.vehicle.model,props.vehicle.body]);
+  const z=p.width/2-.025,rz=z-.15, b=p.belt+.03,r=p.roof;
+  const at=(x:number,y:number,side:number):Point=>[x,y,side*(z-(y-b)/(r-b)*.15+.012)];
+  const pillar=p.truck?.05:-.22;
+  const rearEnd=p.truck?p.tail:p.hatch?p.roofRear+.25:p.tail+.18;
+  return <group rotation={[0,THREE.MathUtils.degToRad(props.angle),0]}>
+    <Body p={p}/>
+    {[-1,1].map(side=><group key={`details-${side}`}>
+      {[-1,1].map(axle=><Line key={axle} points={Array.from({length:49},(_,i)=>{const a=i*Math.PI/48;return [axle*p.wheelbase/2+Math.cos(a)*(p.radius+.072),p.radius+Math.sin(a)*(p.radius+.072),side*(z+.018)] as Point;})} color={p.hatch||p.truck?'#30383c':'#98a4ad'} lineWidth={p.hatch||p.truck?5:2}/>)}
+      <Line points={[[p.nose+.06,b+.009,side*(z-.12)],[p.length/2-.48,b-.065,side*(z-.19)],[p.length/2-.14,b-.14,side*(z-.23)]]} color="#65727b" lineWidth={.8}/>
+      <RoundedBox args={[p.wheelbase-.6,.075,.055]} radius={.025} position={[0,.4,side*(z-.01)]}><meshStandardMaterial color={p.hatch?'#30383c':'#82909a'} metalness={.5} roughness={.4}/></RoundedBox>
+      {p.hatch&&<Line points={[[p.roofFront-.12,r+.045,side*(rz-.09)],[p.roofRear+.12,r+.045,side*(rz-.09)]]} color="#465159" lineWidth={3}/>}
+    </group>)}
+    <Surface points={[[p.nose,b,z],[p.roofFront,r,rz],[p.roofRear,r,rz],[p.tail,b,z]]} color={p.color} metalness={.6}/>
+    <Surface points={[[p.nose,b,-z],[p.roofFront,r,-rz],[p.roofRear,r,-rz],[p.tail,b,-z]]} color={p.color} metalness={.6}/>
+    <Surface points={[[p.roofFront,r+.015,rz],[p.roofFront,r+.015,-rz],[p.roofRear,r+.015,-rz],[p.roofRear,r+.015,rz]]} color={p.color} metalness={.65} crown={.065}/>
+    <Glass points={[[p.nose+.018,b+.04,z-.055],[p.roofFront+.018,r-.035,rz-.055],[p.roofFront+.018,r-.035,-rz+.055],[p.nose+.018,b+.04,-z+.055]]} selected={props.zones.includes('Windshield')} edge={props.edge} mesh={props.mesh}/>
+    <Surface points={[[p.tail-.015,b+.03,z-.06],[p.roofRear-.015,r-.03,rz-.06],[p.roofRear-.015,r-.03,-rz+.06],[p.tail-.015,b+.03,-z+.06]]} color="#304955" metalness={.45} roughness={.18}/>
+    {[-1,1].map(side=><group key={side}>
+      <Glass points={[at(p.nose-.09,b+.045,side),at(p.roofFront-.045,r-.055,side),at(pillar+.045,r-.055,side),at(pillar+.045,b+.045,side)]} selected={props.zones.includes(side===1?'Driver front':'Passenger front')} edge={props.edge} mesh={props.mesh}/>
+      <Glass points={[at(pillar-.045,b+.045,side),at(pillar-.045,r-.055,side),at(p.roofRear+.075,r-.055,side),at(rearEnd,b+.045,side)]} selected={props.zones.includes(side===1?'Driver rear':'Passenger rear')} edge={props.edge} mesh={props.mesh}/>
+      {p.hatch&&!p.truck&&<Surface points={[at(rearEnd-.07,b+.045,side),at(p.roofRear+.01,r-.09,side),at(p.roofRear-.12,r-.15,side),at(p.tail+.09,b+.045,side)]} color="#304955" metalness={.4}/>}
+      {[pillar,p.nose-.04,rearEnd-.06].map(x=><Line key={x} points={[[x,b-.04,side*(z+.026)],[x-.04,.53,side*(z+.026)]]} color="#687780" lineWidth={.8}/>)}
+      <Line points={[[-p.length/2+.22,b-.13,side*(z+.035)],[p.length/2-.26,b-.13,side*(z+.035)]]} color="#dce2e6" lineWidth={1}/>
+      {[pillar+.16,rearEnd+.18].map(x=><RoundedBox key={x} args={[.19,.038,.035]} radius={.016} position={[x,b-.13,side*(z+.045)]}><meshStandardMaterial color="#d4dce2" metalness={.8} roughness={.2}/></RoundedBox>)}
+      <RoundedBox args={[.24,.13,.19]} radius={.045} position={[p.nose-.1,b+.04,side*(z+.12)]} castShadow><meshStandardMaterial color={p.color} metalness={.5} roughness={.3}/></RoundedBox>
+      <Wheel x={p.wheelbase/2} z={side*(p.width/2-.025)} r={p.radius}/><Wheel x={-p.wheelbase/2} z={side*(p.width/2-.025)} r={p.radius}/>
+    </group>)}
+    {p.truck&&<group><Surface points={[[p.tail-.08,b+.015,z-.1],[p.tail-.08,b+.015,-z+.1],[-p.length/2+.16,b+.015,-z+.1],[-p.length/2+.16,b+.015,z-.1]]} color="#263139"/>{[-1,1].map(side=><RoundedBox key={side} args={[p.length/2+p.tail-.06,.17,.11]} radius={.03} position={[(p.tail-p.length/2)/2,b+.065,side*(z-.015)]}><meshStandardMaterial color={p.color} metalness={.6} roughness={.3}/></RoundedBox>)}</group>}
+    <RoundedBox args={[.045,p.truck?.4:.21,p.width*.60]} radius={.02} position={[p.length/2+.018,b-.45,0]}><meshStandardMaterial color="#152027" metalness={.4}/></RoundedBox>
+    {[0,1,2,3].map(i=><mesh key={i} position={[p.length/2+.047,b-.53+i*.055,0]}><boxGeometry args={[.012,.012,p.width*.5]}/><meshStandardMaterial color="#71818b" metalness={.8} roughness={.3}/></mesh>)}
+    {[-1,1].map(side=><group key={side}><RoundedBox args={[.06,p.truck?.21:.075,p.width*.19]} radius={.025} position={[p.length/2+.018,b-.31,side*p.width*.36]}><meshStandardMaterial color="#edf5fa" emissive="#d7e9fa" emissiveIntensity={.7}/></RoundedBox><RoundedBox args={[.06,p.truck?.3:.1,p.width*.2]} radius={.025} position={[-p.length/2-.018,b-.15,side*p.width*.35]}><meshStandardMaterial color="#a91d2b" emissive="#b32231" emissiveIntensity={.5}/></RoundedBox></group>)}
+    <RoundedBox args={[.07,.11,p.width*.87]} radius={.025} position={[p.length/2+.018,.46,0]}><meshStandardMaterial color="#27333d" metalness={.7} roughness={.3}/></RoundedBox><RoundedBox args={[.045,.1,.39]} radius={.012} position={[p.length/2+.047,.53,0]}><meshStandardMaterial color="#d6dfe2"/></RoundedBox>
+  </group>;
+}
+function Scene(props:ViewerProps){return <><Environment resolution={128}><Lightformer form="rect" intensity={2.5} position={[0,5,0]} rotation={[Math.PI/2,0,0]} scale={[10,4,1]}/><Lightformer form="rect" intensity={2} position={[0,2,-5]} scale={[10,2,1]}/><Lightformer form="rect" intensity={1.5} position={[0,3,5]} rotation={[0,Math.PI,0]} scale={[8,2,1]}/></Environment><ambientLight intensity={1.1}/><hemisphereLight intensity={1.8} color="#f7fbff" groundColor="#65717c"/><directionalLight castShadow intensity={3.2} position={[3,6,5]} shadow-mapSize-width={2048} shadow-mapSize-height={2048} shadow-bias={-.0005} shadow-normalBias={.035}/><directionalLight intensity={2.2} position={[-4,3,-5]}/><VehicleModel {...props}/><ContactShadows position={[0,.015,0]} opacity={.5} scale={10} blur={2.5} far={3}/><CameraRig {...props}/></>;}
+export function ThreeVehicleViewer(props:ViewerProps){
+  const [webgl,setWebgl]=useState<boolean|null>(null);const [diagram,setDiagram]=useState(false);
+  useEffect(()=>{queueMicrotask(()=>setWebgl(typeof window.WebGL2RenderingContext!=='undefined'));},[]);
+  const fallback=<VehicleDiagram {...props}/>;
+  return <><div className="absolute inset-0" role="img" aria-label={`${props.vehicle.make} ${props.vehicle.model} interactive shade preview`}>{diagram||webgl===false?fallback:webgl===null?<div className="grid h-full place-items-center text-sm text-slate-600">Preparing vehicle preview…</div>:<SceneBoundary fallback={fallback}><Canvas shadows dpr={[1,1.75]} camera={{position:[5.8,3.4,6.2],fov:34,near:.1,far:100}} gl={{antialias:true,alpha:true}} onCreated={({gl})=>{gl.domElement.addEventListener('webglcontextlost',(event)=>{event.preventDefault();if(gl.domElement.isConnected)setWebgl(false);},{once:true});}}><Suspense fallback={null}><Scene {...props}/></Suspense></Canvas></SceneBoundary>}</div><div className="pointer-events-none absolute left-4 top-4 max-w-[55%] rounded-xl bg-white/85 px-3 py-2 text-[#28333c] shadow-sm backdrop-blur"><strong className="block text-xs">{props.vehicle.year} {props.vehicle.make} {props.vehicle.model}</strong><span className="text-[10px]">{props.vehicle.body} · {props.vehicle.trim} · {props.zones.length} shades</span></div><button className="absolute left-4 top-[76px] z-20 rounded-full border border-slate-300 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700" onClick={()=>{if(webgl===false){setWebgl(true);setDiagram(false);}else setDiagram(v=>!v);}}>{webgl===false?'Retry 3D preview':diagram?'Show 3D vehicle':'2D coverage map'}</button></>;
 }

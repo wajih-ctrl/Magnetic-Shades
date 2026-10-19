@@ -76,4 +76,4 @@ npx vercel --prod
 
 ## Prototype boundaries
 
-Fitment records, pricing, inventory, policies, delivery dates, payments, analytics and administration are demonstration data. Uploaded JPG/PNG artwork is rendered locally in the proof for the current browser session but is not persisted; only its filename and proof state are stored. No payment processor, database, carrier, email, production inventory or real authentication service is connected.
+Fitment records, pricing, inventory, policies, delivery dates, payments, analytics and administration are demonstration data. Uploaded JPG/PNG artwork is saved in browser-local IndexedDB and rendered in both design and proof previews, including after reload. PDF uploads retain the reference-only proof workflow. Vehicle meshes use illustrative model-specific profiles, not licensed manufacturer CAD or physical fitment measurements. Checkout revalidates stored shade configurations against current demo inventory and fitment records. No payment processor, database, carrier, email, production inventory or real authentication service is connected.

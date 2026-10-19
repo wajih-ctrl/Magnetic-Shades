@@ -3,11 +3,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { initialState, type CartItem, type DemoState, type Product } from '@/lib/demo-data';
 
+import { cartIssue } from '@/lib/fitment';
+import { artworkStore } from '@/lib/artwork-storage';
+
 const STORAGE_KEY = 'magnetic-shades-demo-v6';
 
 type DemoContextValue = {
   state: DemoState;
   ready: boolean;
+  artworkPreview:string;
+  setArtworkPreview:(url:string)=>void;
   cartCount: number;
   cartSubtotal: number;
   cartOpen: boolean;
@@ -25,7 +30,7 @@ type DemoContextValue = {
   addSignToCart: () => void;
   createOrder: (customer: string, email: string, delivery: string, shippingAddress: string) => string;
   updateOrder: (id: string, patch: Partial<DemoState['orders'][number]>) => void;
-  submitFitmentRequest: (customer: string) => string;
+  submitFitmentRequest: (customer: string, email:string, notes:string) => string;
   submitQuote: (customer: string) => string;
   submitSupport: (name: string, category: string) => string;
   updateProduct: (id: string, patch: Partial<Product>) => void;
@@ -44,6 +49,7 @@ const DemoContext = createContext<DemoContextValue | null>(null);
 
 export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<DemoState>(initialState);
+  const [artworkPreview,setArtworkPreview]=useState('');
   const [ready, setReady] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -63,8 +69,10 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (ready) localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (ready) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* Keep the active session usable when browser storage is full. */ } }
   }, [state, ready]);
+
+  useEffect(()=>{let active=true;if(state.sign.artworkKey)artworkStore(state.sign.artworkKey).then(url=>{if(active)setArtworkPreview(url);}).catch(()=>{if(active)setArtworkPreview('');});return()=>{active=false;};},[state.sign.artworkKey]);
 
   const setVehicle = useCallback((patch: Partial<DemoState['vehicle']>) => setState(s => ({...s, vehicle:{...s.vehicle,...patch}})), []);
   const setShade = useCallback((patch: Partial<DemoState['shade']>) => setState(s => ({...s, shade:{...s.shade,...patch}})), []);
@@ -93,18 +101,18 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const addShadeToCart = useCallback(() => setState(s => {
     const p=s.products.find(product=>product.sku===s.shade.productSku);
     const fitment=s.fitments.find(f=>f.year===s.vehicle.year&&f.make===s.vehicle.make&&f.model===s.vehicle.model&&f.body===s.vehicle.body&&f.trim===s.vehicle.trim&&f.sku===s.shade.productSku);
-    if(!p||!fitment||fitment.status!=='Verified'||p.inventory<1||p.price<=0||!s.shade.zones.length||!s.shade.zones.every(zone=>fitment.zones.includes(zone)))return s;
+    if(!p||!fitment||fitment.status!=='Verified'||p.status!=='Active'||p.eligibility!=='configure'||p.inventory<1||p.price<=0||!s.shade.zones.length||!s.shade.zones.every(zone=>fitment.zones.includes(zone)))return s;
     const meta=`${s.vehicle.year} ${s.vehicle.make} ${s.vehicle.model} ${s.vehicle.body} ${s.vehicle.trim} · ${s.shade.zones.join(', ')} · ${s.shade.mesh} · ${s.shade.edge} edge · Verified · ${fitment.id}`;
-    const item: CartItem={id:`shade-${Date.now()}`,productId:p.id,name:p.name,sku:p.sku,qty:1,price:p.price,meta,image:p.image};
+    const item: CartItem={id:`shade-${Date.now()}`,productId:p.id,name:p.name,sku:p.sku,qty:1,price:p.price,meta,image:p.image,shadeConfiguration:{vehicle:{...s.vehicle},zones:[...s.shade.zones],mesh:s.shade.mesh,edge:s.shade.edge}};
     return {...s,cart:[...s.cart,item],events:[...s.events,'fitment_add_to_cart']};
   }), []);
 
   const addSignToCart = useCallback(() => {
     setState(s => {
       const p=s.products.find(product=>product.slug==='fleetmark-door-pair');
-      if(!p||s.sign.proofStatus!=='Approved'||s.sign.size==='24 × 36 in')return s;
+      if(!p||p.status!=='Active'||p.inventory<s.sign.qty||s.sign.productType==='Studio Magnetic Panel'||s.sign.proofStatus!=='Approved'||s.sign.size==='24 × 36 in')return s;
       const unit=s.sign.size==='12 × 18 in'?74:126;
-      const item:CartItem={id:`sign-${Date.now()}`,productId:p.id,name:p.name,sku:p.sku,qty:s.sign.qty,price:unit,meta:`${s.sign.size} · ${s.sign.material} · ${s.sign.alignment} · Proof approved`,image:p.image};
+      const item:CartItem={id:`sign-${Date.now()}`,productId:p.id,name:p.name,sku:p.sku,qty:s.sign.qty,price:unit,meta:`${s.sign.size} · ${s.sign.material} · ${s.sign.alignment} · Base ${s.sign.color} · ${s.sign.filename} · Proof approved`,image:p.image,signConfiguration:{...s.sign}};
       return {...s,cart:[...s.cart,item],events:[...s.events,'approved_sign_add_to_cart']};
     });
     setCartOpen(true);
@@ -116,12 +124,13 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const removeDiscount=useCallback(()=>setState(s=>({...s,discount:''})),[]);
 
   const createOrder = useCallback((customer:string,email:string,delivery:string,shippingAddress:string)=>{
+    if(!state.cart.length||state.cart.some(item=>cartIssue(state,item)))return '';
     const id=`MS-${10500+Math.floor(Math.random()*400)}`;
     setState(s=>{const subtotal=s.cart.reduce((a,i)=>a+i.price*i.qty,0);const discount=s.discount?subtotal*.1:0;const shipping=delivery.startsWith('Express')?32:18;const total=Number(((subtotal-discount+shipping)*1.07).toFixed(2));return {...s,lastOrderId:id,cart:[],discount:'',orders:[{id,customer,email,shippingAddress,date:'Oct 16, 2026',total,payment:'Paid (demo)',fulfillment:'Received',request:'None',delivery,items:s.cart.map(i=>({name:i.name,qty:i.qty,price:i.price,meta:i.meta})),timeline:['Order created','Demo payment approved','Received']},...s.orders],events:[...s.events,'purchase']};});
     return id;
-  },[]);
+  },[state]);
   const updateOrder=useCallback((id:string,patch:Partial<DemoState['orders'][number]>)=>setState(s=>({...s,orders:s.orders.map(o=>o.id===id?{...o,...patch,timeline:patch.fulfillment?[...o.timeline,patch.fulfillment]:o.timeline}:o)})),[]);
-  const submitFitmentRequest=useCallback((customer:string)=>{const id=`FR-${300+Math.floor(Math.random()*600)}`;setState(s=>({...s,fitmentRequests:[{id,customer,vehicle:`${s.vehicle.year} ${s.vehicle.make} ${s.vehicle.model} · ${s.vehicle.body} · ${s.vehicle.trim}`,sku:s.shade.productSku,coverage:s.shade.zones.join(', ')||'No coverage selected',appearance:`${s.shade.mesh} · ${s.shade.edge} edge`,status:'Pending Review'},...s.fitmentRequests],events:[...s.events,'fitment_request']}));return id;},[]);
+  const submitFitmentRequest=useCallback((customer:string,email:string,notes:string)=>{const id=`FR-${300+Math.floor(Math.random()*600)}`;setState(s=>({...s,fitmentRequests:[{id,customer,email,notes,vehicle:`${s.vehicle.year} ${s.vehicle.make} ${s.vehicle.model} · ${s.vehicle.body} · ${s.vehicle.trim}`,sku:s.shade.productSku,coverage:s.shade.zones.join(', ')||'No coverage selected',appearance:`${s.shade.mesh} · ${s.shade.edge} edge`,status:'Pending Review'},...s.fitmentRequests],events:[...s.events,'fitment_request']}));return id;},[]);
   const submitQuote=useCallback((customer:string)=>{const id=`QT-${2100+Math.floor(Math.random()*500)}`;setState(s=>({...s,quotes:[{id,customer,product:'Studio Magnetic Panel',qty:s.sign.qty,config:`${s.sign.size} · ${s.sign.material}`,date:'Oct 16, 2026',status:'Submitted',amount:null},...s.quotes],events:[...s.events,'quote_submit']}));return id;},[]);
   const submitSupport=useCallback((name:string,category:string)=>{const id=`SUP-${700+Math.floor(Math.random()*200)}`;setState(s=>({...s,supportRequests:[{id,name,category,status:'Open'},...s.supportRequests]}));return id;},[]);
   const updateProduct=useCallback((id:string,patch:Partial<Product>)=>setState(s=>({...s,products:s.products.map(p=>p.id===id?{...p,...patch,updated:'Oct 16, 2026'}:p)})),[]);
@@ -133,9 +142,9 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const updateArtwork=useCallback((id:string,status:string)=>setState(s=>({...s,artwork:s.artwork.map(a=>a.id===id?{...a,status,proof:status==='Proof Prepared'?a.proof+1:a.proof,readiness:status==='Approved'?'Ready':'Blocked'}:a)})),[]);
   const setDemoRole=useCallback((demoRole:string)=>setState(s=>({...s,demoRole})),[]);
   const recordEvent=useCallback((event:string)=>setState(s=>({...s,events:[...s.events,event]})),[]);
-  const resetDemo=useCallback(()=>setState(initialState()),[]);
+  const resetDemo=useCallback(()=>{setState(initialState());setArtworkPreview('');},[]);
 
-  const value={state,ready,cartCount,cartSubtotal,cartOpen,setCartOpen,currentFitment,setVehicle,setShade,setSign,addToCart,addShadeToCart,addSignToCart,updateCartQty,removeCart,applyDiscount,removeDiscount,createOrder,updateOrder,submitFitmentRequest,submitQuote,submitSupport,updateProduct,addProduct,duplicateProduct,updateFitment,addFitment,updateQuote,updateArtwork,setDemoRole,recordEvent,resetDemo};
+  const value={state,ready,artworkPreview,setArtworkPreview,cartCount,cartSubtotal,cartOpen,setCartOpen,currentFitment,setVehicle,setShade,setSign,addToCart,addShadeToCart,addSignToCart,updateCartQty,removeCart,applyDiscount,removeDiscount,createOrder,updateOrder,submitFitmentRequest,submitQuote,submitSupport,updateProduct,addProduct,duplicateProduct,updateFitment,addFitment,updateQuote,updateArtwork,setDemoRole,recordEvent,resetDemo};
   if (!ready) return <div className="grid min-h-screen place-items-center bg-[#f8f8f6] text-sm font-semibold text-[#626a73]">Loading Magnetic Shades…</div>;
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
 }
