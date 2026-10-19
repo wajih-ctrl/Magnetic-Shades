@@ -30,11 +30,11 @@ npm run build:next
 - `/shop` — search, filters, sorting and active filter chips
 - `/collections/vehicle-shades`, `/collections/magnetic-signs`, `/collections/future-products`
 - `/products/[slug]` — gallery, variants, quantity, eligibility and related products
-- `/configure/vehicle` — Year/Make/Model/Trim selection
-- `/configure/vehicle/preview` — interactive Three.js vehicle preview with a labeled SVG fallback
+- `/configure/vehicle` — dependent Year/Make/Model/Body Style/Trim selection across a realistic demo catalog
+- `/configure/vehicle/preview` — vehicle-specific sedan, SUV and truck Three.js previews with live coverage, mesh and edge treatments plus a labeled SVG fallback
 - `/configure/fitment-result` — Verified, Needs Confirmation and Unsupported outcomes
-- `/configure/fitment-request` — persisted manual-review request
-- `/custom-signs/design` and `/custom-signs/artwork` — sign setup, upload validation and proof actions
+- `/configure/fitment-request` — persisted manual-review request carrying vehicle, body, SKU, coverage and appearance
+- `/custom-signs/design` and `/custom-signs/artwork` — sign setup, upload validation, local JPG/PNG artwork preview and proof actions
 - `/cart`, `/checkout`, `/orders/status` — multi-item commerce, simulated payment and order support
 - `/quote/request`, `/contact`, `/faq`, `/installation-care`, `/policies`
 - `/demo-access` — persistent browser-local role selector
@@ -42,12 +42,12 @@ npm run build:next
 
 ## Seeded scenarios
 
-- Toyota Corolla 2023 LE + `MS-AE-240` → Verified, including illustrative windshield coverage on compatible exterior metal perimeter points
-- Ford F-150 2022 XLT + `MS-AE-240` → Needs Confirmation
-- Honda Civic 2024 Touring + `MS-AE-240` → Unsupported
+- Toyota Corolla 2023 Sedan LE + either shade SKU → Verified
+- Ford F-150 2022 Crew Cab XLT + either shade SKU → Needs Confirmation
+- Honda Civic 2024 Sedan Touring + either shade SKU → Unsupported
 - Discount code: `DEMO10`
 - Order lookup references: `MS-10428` and `MS-10396`
-- Checkout supports successful and unsuccessful demo outcomes and never collects card credentials
+- Checkout defaults to realistic US-format sample details, supports successful and unsuccessful demo outcomes, and never collects card credentials
 - Artwork moves through upload, proof request, revision/approval and checkout or quotation gates
 
 ## Deployment
@@ -76,4 +76,4 @@ npx vercel --prod
 
 ## Prototype boundaries
 
-Fitment records, pricing, inventory, policies, delivery dates, payments, analytics and administration are demonstration data. Uploaded artwork content is validated in the browser but is not persisted; only its filename and proof state are stored. No payment processor, database, carrier, email, production inventory or real authentication service is connected.
+Fitment records, pricing, inventory, policies, delivery dates, payments, analytics and administration are demonstration data. Uploaded JPG/PNG artwork is rendered locally in the proof for the current browser session but is not persisted; only its filename and proof state are stored. No payment processor, database, carrier, email, production inventory or real authentication service is connected.

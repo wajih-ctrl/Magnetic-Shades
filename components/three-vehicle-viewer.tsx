@@ -10,10 +10,13 @@ import { CarIllustration } from '@/components/car-illustration';
 type ViewerProps = {
   zones: string[];
   edge: string;
+  mesh: string;
   view: string;
   zoom: number;
   angle: number;
   resetSignal: number;
+  vehicle: { year:string; make:string; model:string; body:string; trim:string };
+  vehicleType: 'sedan' | 'truck' | 'suv';
 };
 
 type BoundaryProps = { children: ReactNode; fallback: ReactNode };
@@ -67,70 +70,86 @@ function Wheel({ x, z }: { x: number; z: number }) {
   </group>;
 }
 
-function SideWindow({ x, z, selected, edge }: { x: number; z: number; selected: boolean; edge: string }) {
+function SideWindow({ x, y=1.43, z, selected, edge, mesh, scaleX=1 }: { x: number; y?:number; z: number; selected: boolean; edge: string; mesh: string; scaleX?:number }) {
   const outward = Math.sign(z);
-  return <group position={[x, 1.43, z]}>
+  const shadeColor=mesh==='Privacy mesh'?'#071014':'#243a40';
+  return <group position={[x, y, z]} scale={[scaleX,1,1]}>
     <RoundedBox args={[1.02, .6, .055]} radius={.08} smoothness={4}>
       <meshStandardMaterial color={selected ? edge : '#111a21'} metalness={.28} roughness={.42}/>
     </RoundedBox>
     <RoundedBox args={[.91, .49, .025]} radius={.06} smoothness={4} position={[0, 0, outward * .041]}>
-      <meshPhysicalMaterial color={selected ? '#18242a' : '#243740'} transparent opacity={selected ? .86 : .76} roughness={.14} metalness={.18} transmission={selected ? .05 : .18}/>
+      <meshPhysicalMaterial color={selected ? shadeColor : '#243740'} transparent opacity={selected ? (mesh==='Privacy mesh'?.96:.82) : .7} roughness={selected?.62:.14} metalness={.12} transmission={selected ? 0 : .2}/>
     </RoundedBox>
+    {selected&&<mesh position={[0,0,outward*.061]}>
+      <planeGeometry args={[.82,.4,12,7]}/>
+      <meshBasicMaterial color={edge} wireframe transparent opacity={mesh==='Privacy mesh'?.16:.28}/>
+    </mesh>}
   </group>;
 }
 
-function Windshield({ selected, edge }: { selected: boolean; edge: string }) {
+function Windshield({ selected, edge, mesh }: { selected: boolean; edge: string; mesh:string }) {
   return <group position={[1.2, 1.42, 0]} rotation={[0, 0, -.3]}>
     <RoundedBox args={[.06, .73, 1.5]} radius={.03} smoothness={4}>
       <meshStandardMaterial color={selected ? edge : '#111a21'} metalness={.24} roughness={.4}/>
     </RoundedBox>
     <RoundedBox args={[.035, .62, 1.37]} radius={.025} smoothness={4} position={[.041, 0, 0]}>
-      <meshPhysicalMaterial color="#19262d" transparent opacity={selected ? .88 : .7} roughness={.12} transmission={selected ? .03 : .2}/>
+      <meshPhysicalMaterial color={selected?(mesh==='Privacy mesh'?'#071014':'#243a40'):'#19262d'} transparent opacity={selected ? .94 : .7} roughness={selected?.6:.12} transmission={selected ? 0 : .2}/>
     </RoundedBox>
   </group>;
 }
 
-function VehicleModel({ zones, edge, angle }: Pick<ViewerProps, 'zones' | 'edge' | 'angle'>) {
+function VehicleModel({ zones, edge, mesh, angle, vehicle, vehicleType }: Pick<ViewerProps, 'zones' | 'edge' | 'mesh' | 'angle' | 'vehicle' | 'vehicleType'>) {
   const selected = (zone: string) => zones.includes(zone);
+  const truck=vehicleType==='truck';
+  const suv=vehicleType==='suv';
+  const bodyLength=truck?5.65:suv?5.05:4.85;
+  const bodyHeight=truck?.88:suv?.98:.72;
+  const windowY=truck?1.58:suv?1.6:1.43;
+  const bodyColor=vehicle.make==='Ford'?'#b8c2c9':vehicle.make==='Honda'?'#d8dadd':'#c7ced2';
   return <group rotation={[0, THREE.MathUtils.degToRad(angle), 0]}>
-    <RoundedBox args={[4.85, .72, 1.88]} radius={.27} smoothness={6} position={[0, .83, 0]} castShadow receiveShadow>
-      <meshStandardMaterial color="#c7ced2" metalness={.72} roughness={.25}/>
+    <RoundedBox args={[bodyLength, bodyHeight, truck?2.05:1.88]} radius={truck?.16:.27} smoothness={6} position={[0, truck?.94:.83, 0]} castShadow receiveShadow>
+      <meshStandardMaterial color={bodyColor} metalness={.72} roughness={.25}/>
     </RoundedBox>
-    <RoundedBox args={[1.35, .36, 1.76]} radius={.18} smoothness={5} position={[1.72, 1.12, 0]} castShadow>
+    <RoundedBox args={[truck?1.55:1.35, truck?.5:.36, truck?1.94:1.76]} radius={.18} smoothness={5} position={[truck?1.9:1.72, truck?1.28:1.12, 0]} castShadow>
       <meshStandardMaterial color="#d6dbde" metalness={.68} roughness={.22}/>
     </RoundedBox>
-    <RoundedBox args={[2.66, .82, 1.68]} radius={.23} smoothness={6} position={[-.1, 1.42, 0]} castShadow>
+    <RoundedBox args={[truck?2.15:suv?2.9:2.66, truck?.98:suv?1.08:.82, truck?1.84:1.68]} radius={.23} smoothness={6} position={[truck?.38:-.1, windowY, 0]} castShadow>
       <meshStandardMaterial color="#1b2930" metalness={.48} roughness={.2}/>
     </RoundedBox>
-    <mesh position={[-.15, 1.86, 0]} castShadow>
-      <boxGeometry args={[2.05, .08, 1.53]}/>
+    <mesh position={[truck?.35:-.15, truck?2.11:suv?2.15:1.86, 0]} castShadow>
+      <boxGeometry args={[truck?1.65:suv?2.25:2.05, .08, truck?1.68:1.53]}/>
       <meshStandardMaterial color="#b9c1c6" metalness={.72} roughness={.24}/>
     </mesh>
-    <SideWindow x={.48} z={.858} selected={selected('Driver front')} edge={edge}/>
-    <SideWindow x={-.66} z={.858} selected={selected('Driver rear')} edge={edge}/>
-    <SideWindow x={.48} z={-.858} selected={selected('Passenger front')} edge={edge}/>
-    <SideWindow x={-.66} z={-.858} selected={selected('Passenger rear')} edge={edge}/>
-    <Windshield selected={selected('Windshield')} edge={edge}/>
-    {[-1.48, 1.5].flatMap(x => [-.94, .94].map(z => <Wheel key={`${x}-${z}`} x={x} z={z}/>))}
-    <mesh position={[2.435, .9, .55]}>
+    <SideWindow x={truck?.78:.48} y={windowY} z={truck?1.018:.858} selected={selected('Driver front')} edge={edge} mesh={mesh} scaleX={truck?.88:1}/>
+    <SideWindow x={truck?-.28:-.66} y={windowY} z={truck?1.018:.858} selected={selected('Driver rear')} edge={edge} mesh={mesh} scaleX={truck?.78:1}/>
+    <SideWindow x={truck?.78:.48} y={windowY} z={truck?-1.018:-.858} selected={selected('Passenger front')} edge={edge} mesh={mesh} scaleX={truck?.88:1}/>
+    <SideWindow x={truck?-.28:-.66} y={windowY} z={truck?-1.018:-.858} selected={selected('Passenger rear')} edge={edge} mesh={mesh} scaleX={truck?.78:1}/>
+    <Windshield selected={selected('Windshield')} edge={edge} mesh={mesh}/>
+    {truck&&<RoundedBox args={[2.18,.42,1.92]} radius={.1} smoothness={3} position={[-1.75,1.22,0]} castShadow><meshStandardMaterial color={bodyColor} metalness={.7} roughness={.28}/></RoundedBox>}
+    {truck&&<mesh position={[-1.72,1.48,0]}><boxGeometry args={[2.02,.06,1.72]}/><meshStandardMaterial color="#263139" metalness={.35} roughness={.55}/></mesh>}
+    {[-(truck?1.72:1.48), truck?1.72:1.5].flatMap(x => [-1, 1].map(z => <Wheel key={`${x}-${z}`} x={x} z={z}/>))}
+    <mesh position={[bodyLength/2, truck?1:.9, .55]}>
       <boxGeometry args={[.035, .18, .5]}/>
       <meshStandardMaterial color="#f3e9c8" emissive="#fff2b5" emissiveIntensity={.8}/>
     </mesh>
-    <mesh position={[2.435, .9, -.55]}>
+    <mesh position={[bodyLength/2, truck?1:.9, -.55]}>
       <boxGeometry args={[.035, .18, .5]}/>
       <meshStandardMaterial color="#f3e9c8" emissive="#fff2b5" emissiveIntensity={.8}/>
     </mesh>
-    <mesh position={[-2.435, .9, .55]}>
+    <mesh position={[-bodyLength/2, truck?1:.9, .55]}>
       <boxGeometry args={[.035, .19, .43]}/>
       <meshStandardMaterial color="#8d2528" emissive="#b73538" emissiveIntensity={.65}/>
     </mesh>
-    <mesh position={[-2.435, .9, -.55]}>
+    <mesh position={[-bodyLength/2, truck?1:.9, -.55]}>
       <boxGeometry args={[.035, .19, .43]}/>
       <meshStandardMaterial color="#8d2528" emissive="#b73538" emissiveIntensity={.65}/>
     </mesh>
     <mesh position={[0, .48, 0]} castShadow>
-      <boxGeometry args={[3.5, .12, 1.9]}/>
+      <boxGeometry args={[bodyLength-.9, .12, truck?2.05:1.9]}/>
       <meshStandardMaterial color="#20252a" metalness={.5} roughness={.45}/>
+    </mesh>
+    <mesh position={[0,.17,0]} rotation={[-Math.PI/2,0,0]}>
+      <planeGeometry args={[2.4,.55]}/><meshBasicMaterial color="#20252a" transparent opacity={.52}/>
     </mesh>
   </group>;
 }
@@ -141,7 +160,7 @@ function Scene(props: ViewerProps) {
     <hemisphereLight intensity={1.35} color="#ffffff" groundColor="#647079"/>
     <directionalLight castShadow intensity={3.1} position={[4, 7, 5]} shadow-mapSize-width={1024} shadow-mapSize-height={1024}/>
     <spotLight intensity={2.1} position={[-5, 5, -4]} angle={.5} penumbra={.8}/>
-    <VehicleModel zones={props.zones} edge={props.edge} angle={props.angle}/>
+    <VehicleModel zones={props.zones} edge={props.edge} mesh={props.mesh} angle={props.angle} vehicle={props.vehicle} vehicleType={props.vehicleType}/>
     <ContactShadows position={[0, .02, 0]} opacity={.42} scale={8} blur={2.6} far={4}/>
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -.015, 0]} receiveShadow>
       <circleGeometry args={[6.2, 64]}/>
@@ -151,10 +170,10 @@ function Scene(props: ViewerProps) {
   </>;
 }
 
-function Fallback({ zones, edge, angle, zoom }: Pick<ViewerProps, 'zones' | 'edge' | 'angle' | 'zoom'>) {
+function Fallback({ zones, edge, mesh, angle, zoom, vehicle, vehicleType }: Pick<ViewerProps, 'zones' | 'edge' | 'mesh' | 'angle' | 'zoom' | 'vehicle' | 'vehicleType'>) {
   return <div className="absolute inset-0 grid place-items-center">
-    <CarIllustration zones={zones} edge={edge} angle={angle} zoom={zoom} className="w-[93%] drop-shadow-2xl"/>
-    <span className="absolute left-4 top-4 rounded-full bg-[#101419cc] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white">Illustrative Vehicle Preview · 2D fallback</span>
+    <CarIllustration zones={zones} edge={edge} mesh={mesh} angle={angle} zoom={zoom} vehicleType={vehicleType} label={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} className="w-[93%] drop-shadow-2xl"/>
+    <span className="absolute left-4 top-4 rounded-full bg-[#101419cc] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white">{vehicle.make} {vehicle.model} · 2D fallback</span>
   </div>;
 }
 
@@ -174,7 +193,7 @@ export function ThreeVehicleViewer(props: ViewerProps) {
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
-  const fallback = <Fallback zones={props.zones} edge={props.edge} angle={props.angle} zoom={props.zoom}/>;
+  const fallback = <Fallback zones={props.zones} edge={props.edge} mesh={props.mesh} angle={props.angle} zoom={props.zoom} vehicle={props.vehicle} vehicleType={props.vehicleType}/>;
 
   if (webgl === false) return fallback;
   if (webgl === null) return <div className="absolute inset-0 animate-pulse bg-white/10" aria-label="Loading interactive 3D vehicle"/>;
@@ -184,7 +203,7 @@ export function ThreeVehicleViewer(props: ViewerProps) {
       <Canvas shadows dpr={[1, 1.65]} camera={{ position: [5.4, 3.15, 5.7], fov: 34, near: .1, far: 100 }} gl={{ antialias: true, alpha: true }}>
         <Suspense fallback={null}><Scene {...props}/></Suspense>
       </Canvas>
-      <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/30 bg-[#101419d9] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white backdrop-blur">Illustrative Vehicle Preview · Interactive 3D</span>
+      <span className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/30 bg-[#101419d9] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white backdrop-blur">{props.vehicle.year} {props.vehicle.make} {props.vehicle.model} · Interactive 3D</span>
       <span className="pointer-events-none absolute left-4 top-14 rounded-md bg-white/75 px-2.5 py-1 text-[10px] font-medium text-[#333b42] backdrop-blur">Drag to rotate · Scroll to zoom</span>
     </div>
   </SceneBoundary>;

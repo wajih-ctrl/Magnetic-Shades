@@ -35,23 +35,44 @@ export const seedProducts: Product[] = [
   { id:'p8', slug:'edge-storage-sleeve', name:'Edge Storage Sleeve', sku:'MS-CASE-02', category:'vehicle-shades', type:'Storage accessory', price:42, inventory:0, status:'Active', tag:'Out of stock', eligibility:'unavailable', color:'Graphite', updated:'Oct 09, 2026', description:'A structured storage sleeve sized for paired exterior shades.', image:'https://images.unsplash.com/photo-1525609004556-c46c7d6cf023?auto=format&fit=crop&w=1200&q=85', approvedClaims:'Dry storage accessory.' },
 ];
 
-export const vehicleData: Record<string, Record<string, string[]>> = {
-  Toyota: { Corolla: ['LE', 'SE'] },
-  Ford: { 'F-150': ['XLT', 'Lariat'] },
-  Honda: { Civic: ['Touring', 'Sport'] },
+export type VehicleOption = {
+  year: string; make: string; model: string; body: string; trims: string[];
+  preview: 'sedan' | 'truck' | 'suv';
 };
 
+export const vehicleCatalog: VehicleOption[] = [
+  { year:'2025', make:'Toyota', model:'Camry', body:'Sedan', trims:['LE','SE','XLE'], preview:'sedan' },
+  { year:'2025', make:'Honda', model:'CR-V', body:'SUV', trims:['LX','EX','Sport-L Hybrid'], preview:'suv' },
+  { year:'2025', make:'Ford', model:'F-150', body:'Crew Cab', trims:['XL','XLT','Lariat'], preview:'truck' },
+  { year:'2024', make:'Honda', model:'Civic', body:'Sedan', trims:['Sport','Touring'], preview:'sedan' },
+  { year:'2024', make:'Honda', model:'Civic', body:'Hatchback', trims:['Sport','Sport Touring'], preview:'suv' },
+  { year:'2024', make:'Toyota', model:'RAV4', body:'SUV', trims:['LE','XLE','Adventure'], preview:'suv' },
+  { year:'2024', make:'Ford', model:'Escape', body:'SUV', trims:['Active','ST-Line','Platinum'], preview:'suv' },
+  { year:'2023', make:'Toyota', model:'Corolla', body:'Sedan', trims:['LE','SE','XSE'], preview:'sedan' },
+  { year:'2023', make:'Toyota', model:'Corolla', body:'Hatchback', trims:['SE','XSE'], preview:'suv' },
+  { year:'2023', make:'Honda', model:'Accord', body:'Sedan', trims:['LX','EX','Touring Hybrid'], preview:'sedan' },
+  { year:'2023', make:'Ford', model:'Bronco Sport', body:'SUV', trims:['Big Bend','Outer Banks','Badlands'], preview:'suv' },
+  { year:'2022', make:'Ford', model:'F-150', body:'Crew Cab', trims:['XL','XLT','Lariat'], preview:'truck' },
+  { year:'2022', make:'Ford', model:'F-150', body:'SuperCab', trims:['XL','XLT'], preview:'truck' },
+  { year:'2022', make:'Toyota', model:'Highlander', body:'SUV', trims:['LE','XLE','Limited'], preview:'suv' },
+];
+
+export function vehiclePreviewFor(vehicle:{year:string;make:string;model:string;body:string}) {
+  return vehicleCatalog.find(item=>item.year===vehicle.year&&item.make===vehicle.make&&item.model===vehicle.model&&item.body===vehicle.body)?.preview ?? (vehicle.body.includes('Cab')?'truck':vehicle.body==='SUV'||vehicle.body==='Hatchback'?'suv':'sedan');
+}
+
 export const seedFitments: Fitment[] = [
-  { id:'FIT-101', year:'2023', make:'Toyota', model:'Corolla', trim:'LE', body:'Sedan', market:'Demo / PK', sku:'MS-AE-240', zones:['Driver front','Driver rear','Passenger front','Passenger rear','Windshield'], status:'Verified', tested:'Oct 16, 2026', revision:3, geometry:'GEO-CRL-03', notes:'Apply only to compatible clean metal door-frame and exterior windshield-perimeter points. Never attach directly to glass.', exclusions:'Direct glass mounting; operation of moving windows while shades are installed', history:[{revision:1,date:'Sep 18, 2026',note:'Initial front-pair demo record.'},{revision:2,date:'Oct 02, 2026',note:'Rear door coverage added to sample record.'},{revision:3,date:'Oct 16, 2026',note:'Added illustrative windshield coverage at compatible exterior metal perimeter points only.',status:'Verified',zones:['Driver front','Driver rear','Passenger front','Passenger rear','Windshield']}] },
-  { id:'FIT-102', year:'2022', make:'Ford', model:'F-150', trim:'XLT', body:'Crew Cab', market:'Demo / PK', sku:'MS-AE-240', zones:['Driver front','Passenger front'], status:'Needs Confirmation', tested:'Sep 28, 2026', revision:1, geometry:'GEO-F150-01', notes:'Manual review required for body-style details.', exclusions:'Rear doors and windshield pending review', history:[{revision:1,date:'Sep 28, 2026',note:'Created as confirmation-only demo record.'}] },
-  { id:'FIT-103', year:'2024', make:'Honda', model:'Civic', trim:'Touring', body:'Sedan', market:'Demo / PK', sku:'MS-AE-240', zones:[], status:'Unsupported', tested:'Sep 14, 2026', revision:1, geometry:'GEO-CVC-01', notes:'No supported shade configuration in sample records.', exclusions:'All coverage zones', history:[{revision:1,date:'Sep 14, 2026',note:'Marked unsupported for demonstration.'}] },
-  { id:'FIT-104', year:'2023', make:'Toyota', model:'Corolla', trim:'LE', body:'Sedan', market:'Demo / PK', sku:'MS-CP-118', zones:['Driver front','Passenger front'], status:'Verified', tested:'Oct 09, 2026', revision:1, geometry:'GEO-CRL-CP-01', notes:'Front-pair coverage on compatible exterior metal door-frame points only.', exclusions:'Rear doors; windshield; direct glass mounting', history:[{revision:1,date:'Oct 09, 2026',note:'Created verified City Pair sample record.',status:'Verified',zones:['Driver front','Passenger front']}] },
-  { id:'FIT-105', year:'2022', make:'Ford', model:'F-150', trim:'XLT', body:'Crew Cab', market:'Demo / PK', sku:'MS-CP-118', zones:['Driver front','Passenger front'], status:'Needs Confirmation', tested:'Oct 05, 2026', revision:1, geometry:'GEO-F150-CP-01', notes:'Body-style and exterior metal contact points require manual review.', exclusions:'Rear doors; windshield pending confirmation', history:[{revision:1,date:'Oct 05, 2026',note:'Created confirmation-only City Pair sample record.',status:'Needs Confirmation',zones:['Driver front','Passenger front']}] },
+  { id:'FIT-101', year:'2023', make:'Toyota', model:'Corolla', trim:'LE', body:'Sedan', market:'US Demo', sku:'MS-AE-240', zones:['Driver front','Driver rear','Passenger front','Passenger rear','Windshield'], status:'Verified', tested:'Oct 16, 2026', revision:3, geometry:'GEO-CRL-03', notes:'Apply only to compatible clean metal door-frame and exterior windshield-perimeter points. Never attach directly to glass.', exclusions:'Direct glass mounting; operation of moving windows while shades are installed', history:[{revision:1,date:'Sep 18, 2026',note:'Initial front-pair demo record.'},{revision:2,date:'Oct 02, 2026',note:'Rear door coverage added to sample record.'},{revision:3,date:'Oct 16, 2026',note:'Added illustrative windshield coverage at compatible exterior metal perimeter points only.',status:'Verified',zones:['Driver front','Driver rear','Passenger front','Passenger rear','Windshield']}] },
+  { id:'FIT-102', year:'2022', make:'Ford', model:'F-150', trim:'XLT', body:'Crew Cab', market:'US Demo', sku:'MS-AE-240', zones:['Driver front','Driver rear','Passenger front','Passenger rear'], status:'Needs Confirmation', tested:'Sep 28, 2026', revision:1, geometry:'GEO-F150-01', notes:'Manual review required for cab dimensions and exterior metal contact points.', exclusions:'Windshield pending review', history:[{revision:1,date:'Sep 28, 2026',note:'Created as confirmation-only demo record.'}] },
+  { id:'FIT-103', year:'2024', make:'Honda', model:'Civic', trim:'Touring', body:'Sedan', market:'US Demo', sku:'MS-AE-240', zones:[], status:'Unsupported', tested:'Sep 14, 2026', revision:1, geometry:'GEO-CVC-01', notes:'No supported shade configuration in sample records.', exclusions:'All coverage zones', history:[{revision:1,date:'Sep 14, 2026',note:'Marked unsupported for demonstration.'}] },
+  { id:'FIT-104', year:'2023', make:'Toyota', model:'Corolla', trim:'LE', body:'Sedan', market:'US Demo', sku:'MS-CP-118', zones:['Driver front','Passenger front'], status:'Verified', tested:'Oct 09, 2026', revision:1, geometry:'GEO-CRL-CP-01', notes:'Front-pair coverage on compatible exterior metal door-frame points only.', exclusions:'Rear doors; windshield; direct glass mounting', history:[{revision:1,date:'Oct 09, 2026',note:'Created verified City Pair sample record.',status:'Verified',zones:['Driver front','Passenger front']}] },
+  { id:'FIT-105', year:'2022', make:'Ford', model:'F-150', trim:'XLT', body:'Crew Cab', market:'US Demo', sku:'MS-CP-118', zones:['Driver front','Passenger front'], status:'Needs Confirmation', tested:'Oct 05, 2026', revision:1, geometry:'GEO-F150-CP-01', notes:'Cab dimensions and exterior metal contact points require manual review.', exclusions:'Rear doors; windshield pending confirmation', history:[{revision:1,date:'Oct 05, 2026',note:'Created confirmation-only City Pair sample record.',status:'Needs Confirmation',zones:['Driver front','Passenger front']}] },
+  { id:'FIT-106', year:'2024', make:'Honda', model:'Civic', trim:'Touring', body:'Sedan', market:'US Demo', sku:'MS-CP-118', zones:[], status:'Unsupported', tested:'Oct 06, 2026', revision:1, geometry:'GEO-CVC-CP-01', notes:'No supported front-pair configuration in sample records.', exclusions:'All coverage zones', history:[{revision:1,date:'Oct 06, 2026',note:'Added unsupported City Pair scenario.',status:'Unsupported',zones:[]}] },
 ];
 
 export const seedOrders: DemoOrder[] = [
-  { id:'MS-10428', customer:'Amina Shah', email:'amina@example.demo', shippingAddress:'12 Demo Avenue, Lahore, Punjab 54000, Pakistan', date:'Oct 15, 2026', total:356.48, payment:'Paid (demo)', fulfillment:'Preparing', request:'None', delivery:'Illustrative delivery: Oct 22–24', items:[{name:'Aero Edge Shade Kit',qty:1,price:289,meta:'2023 Toyota Corolla LE · Four-window coverage'}], timeline:['Order created','Demo payment approved','Preparing'] },
-  { id:'MS-10396', customer:'Omar Rizvi', email:'omar@example.demo', shippingAddress:'88 Sample Road, Karachi, Sindh 75500, Pakistan', date:'Oct 12, 2026', total:154.22, payment:'Paid (demo)', fulfillment:'Packed', request:'Refund requested', delivery:'Illustrative delivery: Oct 19–21', items:[{name:'Fleetmark Door Pair',qty:1,price:126,meta:'18 × 24 in · Matte'}], timeline:['Order created','Proof approved','Packed','Refund requested'] },
+  { id:'MS-10428', customer:'Olivia Bennett', email:'olivia.bennett@example.demo', shippingAddress:'1842 Magnolia Avenue, Austin, TX 78704, United States', date:'Oct 15, 2026', total:356.48, payment:'Paid (demo)', fulfillment:'Preparing', request:'None', delivery:'Illustrative delivery: Oct 22–24', items:[{name:'Aero Edge Shade Kit',qty:1,price:289,meta:'2023 Toyota Corolla Sedan LE · Four-window coverage'}], timeline:['Order created','Demo payment approved','Preparing'] },
+  { id:'MS-10396', customer:'Ethan Parker', email:'ethan.parker@example.demo', shippingAddress:'725 NW Everett Street, Portland, OR 97209, United States', date:'Oct 12, 2026', total:154.22, payment:'Paid (demo)', fulfillment:'Packed', request:'Refund requested', delivery:'Illustrative delivery: Oct 19–21', items:[{name:'Fleetmark Door Pair',qty:1,price:126,meta:'18 × 24 in · Matte'}], timeline:['Order created','Proof approved','Packed','Refund requested'] },
 ];
 
 export const seedQuotes: Quote[] = [
@@ -76,19 +97,19 @@ export const faqItems = [
 
 export type DemoState = {
   version:number; products:Product[]; fitments:Fitment[]; orders:DemoOrder[]; quotes:Quote[]; artwork:Artwork[]; cart:CartItem[];
-  vehicle:{year:string;make:string;model:string;trim:string}; shade:{zones:string[];mesh:string;edge:string;view:string;zoom:number;angle:number;productSku:string};
+  vehicle:{year:string;make:string;model:string;body:string;trim:string}; shade:{zones:string[];mesh:string;edge:string;view:string;zoom:number;angle:number;productSku:string};
   sign:{size:string;material:string;qty:number;color:string;assist:boolean;filename:string;proofStatus:string;productType:string;alignment:string;assistNotes:string;requestedChanges:string}; discount:string; lastOrderId:string;
-  fitmentRequests:{id:string;customer:string;vehicle:string;status:string}[]; supportRequests:{id:string;name:string;category:string;status:string}[]; demoRole:string; events:string[];
+  fitmentRequests:{id:string;customer:string;vehicle:string;sku:string;coverage:string;appearance:string;status:string}[]; supportRequests:{id:string;name:string;category:string;status:string}[]; demoRole:string; events:string[];
 };
 
 export function initialState(): DemoState {
   return {
-    version:5, products:structuredClone(seedProducts), fitments:structuredClone(seedFitments), orders:structuredClone(seedOrders), quotes:structuredClone(seedQuotes), artwork:structuredClone(seedArtwork),
+    version:6, products:structuredClone(seedProducts), fitments:structuredClone(seedFitments), orders:structuredClone(seedOrders), quotes:structuredClone(seedQuotes), artwork:structuredClone(seedArtwork),
     cart:[
       {id:'line-seed-1',productId:'p5',name:'Surface Prep Kit',sku:'MS-CARE-01',qty:1,price:28,meta:'Neutral finish · Standard kit',image:seedProducts[4].image},
       {id:'line-seed-2',productId:'p3',name:'Fleetmark Door Pair',sku:'MS-FM-1824',qty:1,price:126,meta:'18 × 24 in · Matte magnetic · Proof ART-638 approved',image:seedProducts[2].image},
     ],
-    vehicle:{year:'2023',make:'Toyota',model:'Corolla',trim:'LE'}, shade:{zones:['Driver front','Passenger front'],mesh:'Performance mesh',edge:'Copper',view:'Driver side',zoom:1,angle:0,productSku:'MS-AE-240'},
+    vehicle:{year:'2023',make:'Toyota',model:'Corolla',body:'Sedan',trim:'LE'}, shade:{zones:['Driver front','Passenger front'],mesh:'Performance mesh',edge:'Copper',view:'Driver side',zoom:1,angle:0,productSku:'MS-AE-240'},
     sign:{size:'18 × 24 in',material:'Matte magnetic',qty:2,color:'#f5f3ee',assist:false,filename:'',proofStatus:'Awaiting Artwork',productType:'Fleetmark Door Pair',alignment:'Centered',assistNotes:'',requestedChanges:''}, discount:'', lastOrderId:'MS-10428',
     fitmentRequests:[], supportRequests:[], demoRole:'Retail customer', events:[],
   };

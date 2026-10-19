@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { initialState, type CartItem, type DemoState, type Product } from '@/lib/demo-data';
 
-const STORAGE_KEY = 'magnetic-shades-demo-v5';
+const STORAGE_KEY = 'magnetic-shades-demo-v6';
 
 type DemoContextValue = {
   state: DemoState;
@@ -53,7 +53,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as DemoState;
-        if (parsed.version === 5) restored = parsed;
+        if (parsed.version === 6) restored = parsed;
       }
     } catch { /* fall back to seeded demo data */ }
     queueMicrotask(() => {
@@ -70,7 +70,13 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const setShade = useCallback((patch: Partial<DemoState['shade']>) => setState(s => ({...s, shade:{...s.shade,...patch}})), []);
   const setSign = useCallback((patch: Partial<DemoState['sign']>) => setState(s => ({...s, sign:{...s.sign,...patch}})), []);
 
-  const currentFitment = useMemo(() => state.fitments.find(f => f.year===state.vehicle.year && f.make===state.vehicle.make && f.model===state.vehicle.model && f.trim===state.vehicle.trim && f.sku===state.shade.productSku) || ({...state.fitments[2], year:state.vehicle.year, make:state.vehicle.make, model:state.vehicle.model, trim:state.vehicle.trim, sku:state.shade.productSku}), [state.fitments, state.vehicle, state.shade.productSku]);
+  const currentFitment = useMemo(() => {
+    const exact=state.fitments.find(f => f.year===state.vehicle.year && f.make===state.vehicle.make && f.model===state.vehicle.model && f.body===state.vehicle.body && f.trim===state.vehicle.trim && f.sku===state.shade.productSku);
+    if(exact)return exact;
+    const template=state.fitments.find(f=>f.status==='Needs Confirmation')??state.fitments[0];
+    const zones=state.shade.productSku==='MS-CP-118'?['Driver front','Passenger front']:['Driver front','Driver rear','Passenger front','Passenger rear'];
+    return {...template,id:'FIT-PENDING',year:state.vehicle.year,make:state.vehicle.make,model:state.vehicle.model,body:state.vehicle.body,trim:state.vehicle.trim,sku:state.shade.productSku,zones,status:'Needs Confirmation' as const,revision:0,geometry:'Pending manual review',notes:'This catalog vehicle has no completed demo fitment record. Submit the preserved configuration for manual review.',exclusions:'Checkout remains blocked until the fitment is verified.'};
+  }, [state.fitments, state.vehicle, state.shade.productSku]);
   const cartCount = state.cart.reduce((sum,item)=>sum+item.qty,0);
   const cartSubtotal = state.cart.reduce((sum,item)=>sum+item.qty*item.price,0);
 
@@ -86,9 +92,9 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
 
   const addShadeToCart = useCallback(() => setState(s => {
     const p=s.products.find(product=>product.sku===s.shade.productSku);
-    const fitment=s.fitments.find(f=>f.year===s.vehicle.year&&f.make===s.vehicle.make&&f.model===s.vehicle.model&&f.trim===s.vehicle.trim&&f.sku===s.shade.productSku);
+    const fitment=s.fitments.find(f=>f.year===s.vehicle.year&&f.make===s.vehicle.make&&f.model===s.vehicle.model&&f.body===s.vehicle.body&&f.trim===s.vehicle.trim&&f.sku===s.shade.productSku);
     if(!p||!fitment||fitment.status!=='Verified'||p.inventory<1||p.price<=0||!s.shade.zones.length||!s.shade.zones.every(zone=>fitment.zones.includes(zone)))return s;
-    const meta=`${s.vehicle.year} ${s.vehicle.make} ${s.vehicle.model} ${s.vehicle.trim} · ${s.shade.zones.join(', ')} · ${s.shade.edge} edge`;
+    const meta=`${s.vehicle.year} ${s.vehicle.make} ${s.vehicle.model} ${s.vehicle.body} ${s.vehicle.trim} · ${s.shade.zones.join(', ')} · ${s.shade.mesh} · ${s.shade.edge} edge · Verified · ${fitment.id}`;
     const item: CartItem={id:`shade-${Date.now()}`,productId:p.id,name:p.name,sku:p.sku,qty:1,price:p.price,meta,image:p.image};
     return {...s,cart:[...s.cart,item],events:[...s.events,'fitment_add_to_cart']};
   }), []);
@@ -115,7 +121,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     return id;
   },[]);
   const updateOrder=useCallback((id:string,patch:Partial<DemoState['orders'][number]>)=>setState(s=>({...s,orders:s.orders.map(o=>o.id===id?{...o,...patch,timeline:patch.fulfillment?[...o.timeline,patch.fulfillment]:o.timeline}:o)})),[]);
-  const submitFitmentRequest=useCallback((customer:string)=>{const id=`FR-${300+Math.floor(Math.random()*600)}`;setState(s=>({...s,fitmentRequests:[{id,customer,vehicle:`${s.vehicle.year} ${s.vehicle.make} ${s.vehicle.model} ${s.vehicle.trim}`,status:'Pending Review'},...s.fitmentRequests],events:[...s.events,'fitment_request']}));return id;},[]);
+  const submitFitmentRequest=useCallback((customer:string)=>{const id=`FR-${300+Math.floor(Math.random()*600)}`;setState(s=>({...s,fitmentRequests:[{id,customer,vehicle:`${s.vehicle.year} ${s.vehicle.make} ${s.vehicle.model} · ${s.vehicle.body} · ${s.vehicle.trim}`,sku:s.shade.productSku,coverage:s.shade.zones.join(', ')||'No coverage selected',appearance:`${s.shade.mesh} · ${s.shade.edge} edge`,status:'Pending Review'},...s.fitmentRequests],events:[...s.events,'fitment_request']}));return id;},[]);
   const submitQuote=useCallback((customer:string)=>{const id=`QT-${2100+Math.floor(Math.random()*500)}`;setState(s=>({...s,quotes:[{id,customer,product:'Studio Magnetic Panel',qty:s.sign.qty,config:`${s.sign.size} · ${s.sign.material}`,date:'Oct 16, 2026',status:'Submitted',amount:null},...s.quotes],events:[...s.events,'quote_submit']}));return id;},[]);
   const submitSupport=useCallback((name:string,category:string)=>{const id=`SUP-${700+Math.floor(Math.random()*200)}`;setState(s=>({...s,supportRequests:[{id,name,category,status:'Open'},...s.supportRequests]}));return id;},[]);
   const updateProduct=useCallback((id:string,patch:Partial<Product>)=>setState(s=>({...s,products:s.products.map(p=>p.id===id?{...p,...patch,updated:'Oct 16, 2026'}:p)})),[]);
