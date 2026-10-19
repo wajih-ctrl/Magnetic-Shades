@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 import { AlertTriangle, ArrowRight, CheckCircle2, FileImage, Minus, Plus, RotateCcw, Upload, XCircle } from 'lucide-react';
@@ -13,11 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { CarIllustration } from '@/components/car-illustration';
-import { ThreeVehicleViewer } from '@/components/three-vehicle-viewer';
 import { PageHero, StatusBadge } from '@/components/page-primitives';
 import { useDemo } from '@/components/store/demo-provider';
 import { artworkStore } from '@/lib/artwork-storage';
 import { vehicleCatalog, vehiclePreviewFor } from '@/lib/demo-data';
+
+// Three.js is the heaviest dependency in the prototype; load it only when the
+// configurator route actually renders instead of every storefront page.
+const ThreeVehicleViewer=dynamic(()=>import('@/components/three-vehicle-viewer').then(module=>module.ThreeVehicleViewer),{ssr:false,loading:()=><div className="grid h-full place-items-center text-sm text-slate-600">Preparing vehicle preview…</div>});
 
 const steps=['Vehicle','Coverage','Appearance','Compatibility','Continue'];
 function ConfigSteps({active}:{active:number}){return <div className="site-container grid grid-cols-5 py-7">{steps.map((s,i)=><div key={s} className={`border-t-2 pt-3 text-[9px] sm:text-xs ${i<=active?'border-[#d96b36] font-bold text-[#b95025]':'border-[#d9dde0] text-[#737b82]'}`}>{s}</div>)}</div>}
