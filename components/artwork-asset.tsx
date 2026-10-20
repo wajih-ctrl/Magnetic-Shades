@@ -14,21 +14,19 @@ export function ArtworkAsset({
   filename: string;
   compact?: boolean;
 }) {
-  const [source, setSource] = useState("");
+  const [loaded, setLoaded] = useState({ key: "", source: "" });
   useEffect(() => {
     let active = true;
-    if (!artworkKey) {
-      setSource("");
-      return;
-    }
+    if (!artworkKey) return;
     artworkStore(artworkKey)
-      .then((value) => active && setSource(value))
-      .catch(() => active && setSource(""));
+      .then((value) => active && setLoaded({ key: artworkKey, source: value }))
+      .catch(() => active && setLoaded({ key: artworkKey, source: "" }));
     return () => {
       active = false;
     };
   }, [artworkKey]);
 
+  const source = loaded.key === artworkKey ? loaded.source : "";
   const isPdf = filename.toLowerCase().endsWith(".pdf");
   return (
     <div className="overflow-hidden rounded-xl border bg-[#f4f5f5]">
