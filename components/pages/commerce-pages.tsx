@@ -1,46 +1,1054 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { CheckCircle2, CircleX, PackageSearch, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Textarea } from '@/components/ui/textarea';
-import { EmptyState, PageHero, StatusBadge } from '@/components/page-primitives';
-import { cartIssue } from '@/lib/fitment';
-import { useDemo } from '@/components/store/demo-provider';
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { CheckCircle2, CircleX, PackageSearch, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  EmptyState,
+  PageHero,
+  StatusBadge,
+} from "@/components/page-primitives";
+import { cartIssue } from "@/lib/fitment";
+import { useDemo } from "@/components/store/demo-provider";
+import { artworkStore } from "@/lib/artwork-storage";
 
-function money(n:number){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n)}
-
-export function CartPage(){
-  const {state,cartSubtotal,updateCartQty,removeCart,applyDiscount,removeDiscount}=useDemo(); const [code,setCode]=useState('');const [codeError,setCodeError]=useState('');
-  const discount=state.discount?cartSubtotal*.1:0;const shipping=cartSubtotal?18:0;const tax=(cartSubtotal-discount+shipping)*.07;const total=cartSubtotal-discount+shipping+tax;
-  return <><PageHero eyebrow="Shopping bag" title="Your selected products." copy="Payable products stay separate from quote and fitment requests. All totals are sample calculations."/><section className="py-14"><div className="site-container">{!state.cart.length?<EmptyState title="Your cart is ready for a fresh start" copy="Explore fixed-price care accessories or configure a verified vehicle shade."/>:<div className="grid gap-10 lg:grid-cols-[1fr_380px]"><div>{state.cart.map(item=>{const editHref=item.id.startsWith('shade-')?'/configure/vehicle/preview':item.id.startsWith('sign-')||item.productId==='p3'?'/custom-signs/artwork':`/products/${state.products.find(product=>product.id===item.productId)?.slug||''}`;return <article key={item.id} className="grid grid-cols-[92px_1fr] gap-4 border-b border-[#e1e5e8] py-5 sm:grid-cols-[120px_1fr_auto]"><img src={item.image} alt="" className="h-24 w-[92px] rounded-xl object-cover sm:h-28 sm:w-[120px]"/><div><div className="flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-[.1em] text-[#626a73]">{item.sku}</p><h2 className="mt-1 text-lg font-semibold">{item.name}</h2></div><button className="text-[#b83f43] sm:hidden" onClick={()=>removeCart(item.id)} aria-label={`Remove ${item.name}`}><Trash2 className="size-4"/></button></div><p className="mt-2 max-w-xl text-sm leading-6 text-[#626a73]">{item.meta}</p><p className="mt-2 text-xs text-[#626a73]">Unit price: {money(item.price)}</p><div className="mt-4 flex flex-wrap items-center gap-3"><div className="inline-flex items-center overflow-hidden rounded-full border bg-white"><button aria-label={`Decrease ${item.name} quantity`} className="size-9" onClick={()=>item.qty===1?removeCart(item.id):updateCartQty(item.id,item.qty-1)}>−</button><span className="grid w-9 place-items-center text-sm font-bold">{item.qty}</span><button aria-label={`Increase ${item.name} quantity`} className="size-9" onClick={()=>updateCartQty(item.id,item.qty+1)}>+</button></div><Link href={editHref} className="text-xs font-bold text-[#b95025]">Edit selection</Link></div></div><div className="col-start-2 flex flex-col items-end justify-between sm:col-start-auto"><strong>{money(item.price*item.qty)}</strong><button className="hidden items-center gap-1 text-xs font-semibold text-[#b83f43] sm:flex" onClick={()=>removeCart(item.id)}><Trash2 className="size-3.5"/> Remove</button></div></article>})}<Button variant="outline" className="mt-6 rounded-full" asChild><Link href="/shop">Continue shopping</Link></Button></div><OrderSummary subtotal={cartSubtotal} discount={discount} shipping={shipping} tax={tax} total={total}>{state.discount?<div className="mt-5 flex items-center justify-between rounded-xl bg-[#edf8f1] p-3 text-sm"><span><strong>DEMO10</strong> applied</span><button className="font-bold text-[#b83f43]" onClick={removeDiscount}>Remove</button></div>:<div className="mt-5 flex gap-2"><Input value={code} onChange={e=>setCode(e.target.value)} placeholder="Demo code"/><Button variant="outline" onClick={()=>{if(!applyDiscount(code))setCodeError('Try DEMO10');else setCodeError('')}}>Apply</Button></div>}{codeError&&<p className="mt-2 text-xs text-[#b83f43]">{codeError}</p>}<Button className="mt-5 w-full rounded-full bg-[#d96b36]" asChild><Link href="/checkout">Proceed to checkout</Link></Button></OrderSummary></div>}</div></section></>;
+function money(n: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(n);
 }
-function OrderSummary({subtotal,discount,shipping,tax,total,children}:{subtotal:number;discount:number;shipping:number;tax:number;total:number;children?:React.ReactNode}){return <aside className="h-fit rounded-[20px] border border-[#e1e5e8] bg-white p-6 lg:sticky lg:top-28"><h2 className="text-xl font-semibold">Order summary</h2><dl className="mt-5 grid gap-3 text-sm"><Row label="Subtotal" value={money(subtotal)}/><Row label="Demo discount" value={discount?`−${money(discount)}`:'—'}/><Row label="Estimated shipping" value={money(shipping)}/><Row label="Estimated tax" value={money(tax)}/><div className="mt-2 flex justify-between border-t pt-4 text-lg font-bold"><dt>Total</dt><dd>{money(total)}</dd></div></dl>{children}<p className="mt-4 text-[11px] leading-5 text-[#737b82]">Sample USD totals. No real payment is collected.</p></aside>}
-function Row({label,value}:{label:string;value:string}){return <div className="flex justify-between gap-4 text-[#626a73]"><dt>{label}</dt><dd>{value}</dd></div>}
 
-export function CheckoutPage(){
-  const demoDetails={name:'Olivia Bennett',email:'olivia.bennett@example.demo',phone:'(512) 555-0148',address:'1842 Magnolia Avenue',city:'Austin',region:'TX',postal:'78704',country:'United States'};
-  const {state,cartSubtotal,createOrder,recordEvent}=useDemo();const router=useRouter();const [fields,setFields]=useState(demoDetails);const [delivery,setDelivery]=useState('Standard demo delivery');const [method,setMethod]=useState('Demo card payment');const [scenario,setScenario]=useState('success');const [error,setError]=useState('');
-  useEffect(()=>{recordEvent('checkout_start')},[recordEvent]);
-  const discount=state.discount?cartSubtotal*.1:0;const shipping=delivery.startsWith('Express')?32:18;const tax=(cartSubtotal-discount+shipping)*.07;const total=cartSubtotal-discount+shipping+tax;
-  const set=(k:string,v:string)=>setFields(f=>({...f,[k]:v}));const pay=()=>{if(!fields.name||!fields.email.includes('@')||!fields.address||!fields.city){setError('Complete the required customer and shipping fields.');return;}if(!state.cart.length){setError('Your cart is empty.');return;}const blocked=state.cart.map(item=>cartIssue(state,item)).find(Boolean);if(blocked){setError(blocked);return;}if(fields.country==='United States'&&(!/^[A-Za-z]{2}$/.test(fields.region)||!/^\d{5}(-\d{4})?$/.test(fields.postal)||(fields.phone&&!/^(1)?\d{10}$/.test(fields.phone.replace(/\D/g,''))))){setError('Use a two-letter US state, a valid ZIP code, and a 10-digit phone number.');return;}if(scenario==='failure'){setError('The unsuccessful demo payment was declined. Your cart and details are preserved.');return;}const shippingAddress=[fields.address,fields.city,fields.region,fields.postal,fields.country].filter(Boolean).join(', ');const id=createOrder(fields.name,fields.email,delivery,shippingAddress);if(!id){setError('Cart eligibility changed. Review your selections before checkout.');return;}router.push(`/checkout/confirmation/${id}`)};
-  return <><PageHero eyebrow="Secure demo checkout" title="Complete the simulated purchase." copy="Choose a payment method and outcome without entering card numbers, CVV or payment tokens."/><section className="py-14"><div className="site-container grid gap-10 lg:grid-cols-[1fr_390px]"><div className="space-y-6"><CheckoutSection title="Customer details"><div className="grid gap-4 sm:grid-cols-2"><Field label="Full name *" value={fields.name} onChange={v=>set('name',v)}/><Field label="Email *" value={fields.email} onChange={v=>set('email',v)} type="email"/><Field label="Phone" value={fields.phone} onChange={v=>set('phone',v)} type="tel"/><Button type="button" variant="outline" className="self-end" onClick={()=>setFields(demoDetails)}>Restore US demo details</Button></div></CheckoutSection><CheckoutSection title="Shipping address"><div className="grid gap-4 sm:grid-cols-2"><div className="sm:col-span-2"><Field label="Street address *" value={fields.address} onChange={v=>set('address',v)}/></div><Field label="City *" value={fields.city} onChange={v=>set('city',v)}/><Field label="State" value={fields.region} onChange={v=>set('region',v)}/><Field label="ZIP code" value={fields.postal} onChange={v=>set('postal',v)}/><Field label="Country" value={fields.country} onChange={v=>set('country',v)}/></div></CheckoutSection><CheckoutSection title="Delivery option"><RadioGroup value={delivery} onValueChange={setDelivery} className="grid gap-3"><Choice value="Standard demo delivery" title="Standard demo delivery" detail="$18.00 · Illustrative 5–7 business days"/><Choice value="Express demo delivery" title="Express demo delivery" detail="$32.00 · Illustrative 2–3 business days"/></RadioGroup></CheckoutSection><CheckoutSection title="Payment simulation"><p className="mb-4 text-sm leading-6 text-[#626a73]">No payment credentials are requested or stored. All totals and outcomes are simulated.</p><Label className="mb-2 block">Demo payment method</Label><RadioGroup value={method} onValueChange={setMethod} className="mb-5 grid gap-3 sm:grid-cols-2"><Choice value="Demo card payment" title="Demo Card Payment" detail="No card fields are collected."/><Choice value="Demo alternative payment" title="Demo Alternative Payment" detail="Simulated external-method choice."/></RadioGroup><Label className="mb-2 block">Outcome</Label><RadioGroup value={scenario} onValueChange={setScenario} className="grid gap-3"><Choice value="success" title="Simulate successful payment" detail={`Creates a paid demo order using ${method}.`}/><Choice value="failure" title="Simulate unsuccessful payment" detail="Preserves the form and cart, then offers retry."/></RadioGroup>{error&&<div className="mt-4 flex gap-3 rounded-xl border border-[#efcccc] bg-[#fff0f0] p-4 text-sm text-[#9f363a]"><CircleX className="size-5 shrink-0"/><span>{error}</span></div>}<Button size="lg" className="mt-6 w-full rounded-full bg-[#d96b36]" onClick={pay}>{scenario==='success'?`Place demo order · ${money(total)}`:'Run unsuccessful payment / retry'}</Button></CheckoutSection></div><OrderSummary subtotal={cartSubtotal} discount={discount} shipping={shipping} tax={tax} total={total}><div className="mt-5 space-y-3 border-t pt-4">{state.cart.map(item=><div key={item.id} className="flex justify-between gap-3 text-sm"><span>{item.qty} × {item.name}</span><strong>{money(item.qty*item.price)}</strong></div>)}</div></OrderSummary></div></section></>;
+export function CartPage() {
+  const {
+    state,
+    cartSubtotal,
+    editSignCartItem,
+    updateCartQty,
+    removeCart,
+    applyDiscount,
+    removeDiscount,
+  } = useDemo();
+  const [code, setCode] = useState("");
+  const [codeError, setCodeError] = useState("");
+  const discount = state.discount ? cartSubtotal * 0.1 : 0;
+  const shipping = cartSubtotal ? 18 : 0;
+  const tax = (cartSubtotal - discount + shipping) * 0.07;
+  const total = cartSubtotal - discount + shipping + tax;
+  return (
+    <>
+      <PageHero
+        eyebrow="Shopping bag"
+        title="Your selected products."
+        copy="Each custom sign keeps its own artwork, approved proof and production configuration through checkout."
+      />
+      <section className="py-14">
+        <div className="site-container">
+          {!state.cart.length ? (
+            <EmptyState
+              title="Your cart is ready for a fresh start"
+              copy="Explore fixed-price care accessories or configure a verified vehicle shade."
+            />
+          ) : (
+            <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
+              <div>
+                {state.cart.map((item) => {
+                  const editHref = item.id.startsWith("shade-")
+                    ? "/configure/vehicle/preview"
+                    : item.id.startsWith("sign-") || item.productId === "p3"
+                      ? "/custom-signs/artwork"
+                      : `/products/${state.products.find((product) => product.id === item.productId)?.slug || ""}`;
+                  return (
+                    <article
+                      key={item.id}
+                      className="grid grid-cols-[92px_1fr] gap-4 border-b border-[#e1e5e8] py-5 sm:grid-cols-[120px_1fr_auto]"
+                    >
+                      <CartThumbnail item={item} />
+                      <div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs uppercase tracking-[.1em] text-[#626a73]">
+                              {item.sku}
+                            </p>
+                            <h2 className="mt-1 text-lg font-semibold">
+                              {item.name}
+                            </h2>
+                          </div>
+                          <button
+                            className="text-[#b83f43] sm:hidden"
+                            onClick={() => removeCart(item.id)}
+                            aria-label={`Remove ${item.name}`}
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                        <p className="mt-2 max-w-xl text-sm leading-6 text-[#626a73]">
+                          {item.meta}
+                        </p>
+                        {item.signConfiguration && (
+                          <dl className="mt-3 grid max-w-xl gap-x-5 gap-y-1 rounded-xl bg-[#f3f4f4] p-3 text-xs sm:grid-cols-2">
+                            <div>
+                              <dt className="text-[#626a73]">Artwork</dt>
+                              <dd className="font-semibold">
+                                {item.signConfiguration.filename}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-[#626a73]">Size / finish</dt>
+                              <dd className="font-semibold">
+                                {item.signConfiguration.size} ·{" "}
+                                {item.signConfiguration.material}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-[#626a73]">Approved proof</dt>
+                              <dd className="font-semibold">
+                                Customer proof v
+                                {item.signConfiguration.proofVersion}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-[#626a73]">
+                                Production review
+                              </dt>
+                              <dd className="font-semibold">
+                                {item.signConfiguration.businessReviewStatus}
+                              </dd>
+                            </div>
+                          </dl>
+                        )}
+                        <p className="mt-2 text-xs text-[#626a73]">
+                          Unit price: {money(item.price)}
+                        </p>
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                          {item.signConfiguration ? (
+                            <span className="rounded-full border bg-[#f3f4f4] px-4 py-2 text-xs font-semibold">
+                              Approved quantity: {item.qty}
+                            </span>
+                          ) : (
+                            <div className="inline-flex items-center overflow-hidden rounded-full border bg-white">
+                              <button
+                                aria-label={`Decrease ${item.name} quantity`}
+                                className="size-9"
+                                onClick={() =>
+                                  item.qty === 1
+                                    ? removeCart(item.id)
+                                    : updateCartQty(item.id, item.qty - 1)
+                                }
+                              >
+                                −
+                              </button>
+                              <span className="grid w-9 place-items-center text-sm font-bold">
+                                {item.qty}
+                              </span>
+                              <button
+                                aria-label={`Increase ${item.name} quantity`}
+                                className="size-9"
+                                onClick={() =>
+                                  updateCartQty(item.id, item.qty + 1)
+                                }
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                          <Link
+                            href={editHref}
+                            onClick={() =>
+                              item.signConfiguration &&
+                              editSignCartItem(item.id)
+                            }
+                            className="text-xs font-bold text-[#b95025]"
+                          >
+                            {item.signConfiguration
+                              ? "Edit approved sign"
+                              : "Edit selection"}
+                          </Link>
+                        </div>
+                      </div>
+                      <div className="col-start-2 flex flex-col items-end justify-between sm:col-start-auto">
+                        <strong>{money(item.price * item.qty)}</strong>
+                        <button
+                          className="hidden items-center gap-1 text-xs font-semibold text-[#b83f43] sm:flex"
+                          onClick={() => removeCart(item.id)}
+                        >
+                          <Trash2 className="size-3.5" /> Remove
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+                <Button variant="outline" className="mt-6 rounded-full" asChild>
+                  <Link href="/shop">Continue shopping</Link>
+                </Button>
+              </div>
+              <OrderSummary
+                subtotal={cartSubtotal}
+                discount={discount}
+                shipping={shipping}
+                tax={tax}
+                total={total}
+              >
+                {state.discount ? (
+                  <div className="mt-5 flex items-center justify-between rounded-xl bg-[#edf8f1] p-3 text-sm">
+                    <span>
+                      <strong>DEMO10</strong> applied
+                    </span>
+                    <button
+                      className="font-bold text-[#b83f43]"
+                      onClick={removeDiscount}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-5 flex gap-2">
+                    <Input
+                      value={code}
+                      onChange={(e) => setCode(e.target.value)}
+                      placeholder="Demo code"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (!applyDiscount(code)) setCodeError("Try DEMO10");
+                        else setCodeError("");
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                )}
+                {codeError && (
+                  <p className="mt-2 text-xs text-[#b83f43]">{codeError}</p>
+                )}
+                <Button
+                  className="mt-5 w-full rounded-full bg-[#d96b36]"
+                  asChild
+                >
+                  <Link href="/checkout">Proceed to checkout</Link>
+                </Button>
+              </OrderSummary>
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
 }
-function CheckoutSection({title,children}:{title:string;children:React.ReactNode}){return <section className="rounded-[20px] border border-[#e1e5e8] bg-white p-6"><h2 className="mb-5 text-xl font-semibold">{title}</h2>{children}</section>}
-function Field({label,value,onChange,type='text'}:{label:string;value:string;onChange:(v:string)=>void;type?:string}){return <div><Label>{label}</Label><Input type={type} value={value} onChange={e=>onChange(e.target.value)} className="mt-2"/></div>}
-function Choice({value,title,detail}:{value:string;title:string;detail:string}){return <Label htmlFor={value} className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#e1e5e8] p-4"><RadioGroupItem id={value} value={value}/><span><strong className="block text-sm">{title}</strong><span className="mt-1 block text-xs font-normal text-[#626a73]">{detail}</span></span></Label>}
-
-export function ConfirmationPage({orderId}:{orderId:string}){const {state}=useDemo();const order=state.orders.find(o=>o.id===orderId)||state.orders.find(o=>o.id===state.lastOrderId);if(!order)return <PageHero eyebrow="Order" title="Demo order not found"/>;return <section className="py-20"><div className="site-container"><div className="mx-auto max-w-4xl rounded-[28px] border border-[#e1e5e8] bg-white p-8 sm:p-12"><span className="grid size-16 place-items-center rounded-full bg-[#e9f5ed] text-[#24764c]"><CheckCircle2 className="size-8"/></span><p className="mt-7 text-xs font-bold uppercase tracking-[.15em] text-[#626a73]">Order confirmed</p><h1 className="mt-2 text-4xl font-semibold tracking-[-.05em]">Thank you, {order.customer}.</h1><p className="mt-4 leading-7 text-[#626a73]">Demo order <strong>{order.id}</strong> has been created with a simulated payment status. No funds were charged.</p><div className="my-8 grid gap-4 rounded-2xl bg-[#f3f4f4] p-6 sm:grid-cols-2"><div><span className="text-xs text-[#626a73]">Payment</span><div className="mt-1"><StatusBadge status={order.payment}/></div></div><div><span className="text-xs text-[#626a73]">Fulfillment</span><p className="mt-1 font-semibold">{order.fulfillment}</p></div><div><span className="text-xs text-[#626a73]">Delivery</span><p className="mt-1 font-semibold">{order.delivery}</p></div><div><span className="text-xs text-[#626a73]">Order total</span><p className="mt-1 font-semibold">{money(order.total)}</p></div><div className="sm:col-span-2"><span className="text-xs text-[#626a73]">Shipping information</span><p className="mt-1 font-semibold">{order.shippingAddress}</p></div></div><div className="space-y-3">{order.items.map((i,idx)=><div key={idx} className="flex justify-between border-b pb-3 text-sm"><span>{i.qty} × {i.name}<small className="mt-1 block text-[#626a73]">{i.meta}</small></span><strong>{money(i.qty*i.price)}</strong></div>)}</div><div className="mt-8 flex flex-wrap gap-3"><Button className="rounded-full bg-[#171c22]" asChild><Link href={`/orders/status?order=${order.id}`}>View order status</Link></Button><Button variant="outline" className="rounded-full" asChild><Link href="/shop">Continue shopping</Link></Button><Button variant="ghost" asChild><Link href="/installation-care">Installation guide</Link></Button></div></div></div></section>}
-
-export function QuoteRequestPage(){const {state,submitQuote}=useDemo();const [name,setName]=useState('');const [email,setEmail]=useState('');const [company,setCompany]=useState('');const [notes,setNotes]=useState('');const [timing,setTiming]=useState('');const [ref,setRef]=useState('');const [error,setError]=useState('');const vehicle=`${state.vehicle.year} ${state.vehicle.make} ${state.vehicle.model} · ${state.vehicle.body} · ${state.vehicle.trim}`;const submit=()=>{if(!name||!email.includes('@')){setError('Enter a name and valid demo email.');return;}setRef(submitQuote(name));};return <><PageHero eyebrow="Quotation" title="Tell us what you are planning." copy="Submitting this form creates a Pending Review record. It does not charge you or create a production order."/><section className="py-14"><div className="site-container max-w-4xl">{ref?<div className="rounded-[22px] border border-[#cde8d8] bg-[#edf8f1] p-8"><CheckCircle2 className="size-10 text-[#24764c]"/><h2 className="mt-5 text-3xl font-semibold">Quote submitted</h2><p className="mt-3 text-[#4f6658]">Reference <strong>{ref}</strong> is Pending Review and now appears in Admin Quotes & Artwork.</p><dl className="mt-6 grid gap-3 rounded-xl bg-white/60 p-5 text-sm sm:grid-cols-2"><div><dt className="text-[#626a73]">Product</dt><dd className="font-semibold">{state.sign.productType}</dd></div><div><dt className="text-[#626a73]">Configuration</dt><dd className="font-semibold">{state.sign.size} · {state.sign.material}</dd></div><div><dt className="text-[#626a73]">Quantity</dt><dd className="font-semibold">{state.sign.qty}</dd></div><div><dt className="text-[#626a73]">Artwork</dt><dd className="font-semibold">{state.sign.filename||'No artwork reference'}</dd></div>{timing&&<div><dt className="text-[#626a73]">Requested timing</dt><dd className="font-semibold">{timing}</dd></div>}</dl><Button className="mt-6 rounded-full" asChild><Link href="/admin/quotes-artwork">View record in admin</Link></Button></div>:<div className="rounded-[22px] border border-[#e1e5e8] bg-white p-7"><div className="grid gap-5 sm:grid-cols-2"><Field label="Customer name *" value={name} onChange={setName}/><Field label="Email *" value={email} onChange={setEmail} type="email"/><Field label="Company name" value={company} onChange={setCompany}/><Field label="Product" value={state.sign.productType} onChange={()=>{}}/><Field label="Size / material" value={`${state.sign.size} · ${state.sign.material}`} onChange={()=>{}}/><Field label="Quantity" value={String(state.sign.qty)} onChange={()=>{}}/><Field label="Vehicle details, if applicable" value={vehicle} onChange={()=>{}}/><Field label="Artwork reference" value={state.sign.filename||'No artwork selected'} onChange={()=>{}}/><Field label="Requested timing (optional)" value={timing} onChange={setTiming}/><div className="sm:col-span-2"><Label>Project notes</Label><Textarea value={notes} onChange={event=>setNotes(event.target.value)} className="mt-2"/></div></div>{error&&<p className="mt-4 text-sm text-[#b83f43]">{error}</p>}<Button className="mt-6 rounded-full bg-[#d96b36]" onClick={submit}>Submit quote request</Button></div>}</div></section></>}
-export function OrderStatusPage(){
-  const {state,updateOrder}=useDemo();const [ref,setRef]=useState(state.lastOrderId||'MS-10428');const [email,setEmail]=useState('');const [found,setFound]=useState<typeof state.orders[number]|null>(null);const [searched,setSearched]=useState(false);const lookup=()=>{setSearched(true);setFound(state.orders.find(order=>order.id.toLowerCase()===ref.trim().toLowerCase()&&(!email.trim()||order.email.toLowerCase()===email.trim().toLowerCase()))||null)};
-  return <><PageHero eyebrow="Order status & help" title="Track a demonstration order." copy="Use MS-10428, MS-10396 or the reference created at checkout. Demo email is optional."/><section className="py-14"><div className="site-container max-w-4xl"><div className="grid gap-2 rounded-[18px] border border-[#e1e5e8] bg-white p-4 sm:grid-cols-[1fr_1fr_auto]"><Input value={ref} onChange={event=>setRef(event.target.value)} placeholder="Order reference" aria-label="Order reference"/><Input value={email} onChange={event=>setEmail(event.target.value)} placeholder="Demo email (optional)" aria-label="Demo email"/><Button onClick={lookup}>Find order</Button></div>{found===null?<div className="mt-6 rounded-[18px] border border-[#e1e5e8] bg-white p-10 text-center"><PackageSearch className="mx-auto size-9 text-[#d96b36]"/><h2 className="mt-4 text-xl font-semibold">{searched?'No matching demonstration order':'Enter a reference to view its progress'}</h2><p className="mt-2 text-sm text-[#626a73]">{searched?'Check the order reference and optional email, then try again.':'Your lookup stays on this screen until a matching sample record is found.'}</p><Button variant="outline" className="mt-5 rounded-full" asChild><Link href="/shop">Continue shopping</Link></Button></div>:<div className="mt-6 rounded-[22px] border border-[#e1e5e8] bg-white p-7"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-[.12em] text-[#626a73]">{found.id} · {found.date}</p><h2 className="mt-2 text-3xl font-semibold">{found.fulfillment}</h2></div><StatusBadge status={found.payment}/></div><p className="mt-4 text-sm text-[#626a73]">{found.delivery} · Tracking placeholder DEMO-{found.id.replace('MS-','')}</p><div className="my-8 grid gap-4 sm:grid-cols-4">{found.timeline.map((item,index)=><div key={`${item}-${index}`} className="border-t-2 border-[#d96b36] pt-3"><span className="text-xs text-[#626a73]">Step {index+1}</span><p className="mt-1 text-sm font-semibold">{item}</p></div>)}</div><div className="space-y-3">{found.items.map((item,index)=><div key={index} className="flex justify-between border-b pb-3 text-sm"><span>{item.qty} × {item.name}<small className="block text-[#626a73]">{item.meta}</small></span><strong>{money(item.qty*item.price)}</strong></div>)}</div><div className="mt-7 flex flex-wrap gap-3"><RequestDialog label="Request cancellation" title="Request order cancellation" onConfirm={()=>{updateOrder(found.id,{request:'Cancellation requested'});setFound({...found,request:'Cancellation requested'})}}/><RequestDialog label="Request refund" title="Request a demo refund" onConfirm={()=>{updateOrder(found.id,{request:'Refund requested'});setFound({...found,request:'Refund requested'})}}/><Button variant="outline" className="rounded-full" asChild><Link href="/contact">Contact support</Link></Button><Button variant="ghost" asChild><Link href="/faq">Browse FAQs</Link></Button><Button variant="ghost" asChild><Link href="/shop">Continue shopping</Link></Button></div>{found.request!=='None'&&<p className="mt-5 rounded-xl bg-[#fff8e9] p-4 text-sm text-[#8b5b15]">Current request: {found.request}. This is visible in Admin Orders.</p>}</div>}</div></section></>;
+function CartThumbnail({
+  item,
+}: {
+  item: ReturnType<typeof useDemo>["state"]["cart"][number];
+}) {
+  const [src, setSrc] = useState(item.image);
+  useEffect(() => {
+    let active = true;
+    if (item.signConfiguration?.artworkKey)
+      artworkStore(item.signConfiguration.artworkKey)
+        .then((value) => {
+          if (active && value) setSrc(value);
+        })
+        .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [item.signConfiguration?.artworkKey]);
+  return (
+    <img
+      src={src}
+      alt={
+        item.signConfiguration
+          ? `Artwork for ${item.signConfiguration.filename}`
+          : ""
+      }
+      className="h-24 w-[92px] rounded-xl bg-[#e8eaeb] object-contain sm:h-28 sm:w-[120px]"
+    />
+  );
 }
-function RequestDialog({label,title,onConfirm}:{label:string;title:string;onConfirm:()=>void}){return <Dialog><DialogTrigger asChild><Button variant="outline" className="rounded-full">{label}</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>This updates the order with a review request. It does not issue a real refund or cancel fulfillment.</DialogDescription></DialogHeader><DialogFooter><DialogClose asChild><Button variant="outline">Keep order</Button></DialogClose><DialogClose asChild><Button onClick={onConfirm}>Submit request</Button></DialogClose></DialogFooter></DialogContent></Dialog>}
+function OrderSummary({
+  subtotal,
+  discount,
+  shipping,
+  tax,
+  total,
+  children,
+}: {
+  subtotal: number;
+  discount: number;
+  shipping: number;
+  tax: number;
+  total: number;
+  children?: React.ReactNode;
+}) {
+  return (
+    <aside className="h-fit rounded-[20px] border border-[#e1e5e8] bg-white p-6 lg:sticky lg:top-28">
+      <h2 className="text-xl font-semibold">Order summary</h2>
+      <dl className="mt-5 grid gap-3 text-sm">
+        <Row label="Subtotal" value={money(subtotal)} />
+        <Row
+          label="Demo discount"
+          value={discount ? `−${money(discount)}` : "—"}
+        />
+        <Row label="Estimated shipping" value={money(shipping)} />
+        <Row label="Estimated tax" value={money(tax)} />
+        <div className="mt-2 flex justify-between border-t pt-4 text-lg font-bold">
+          <dt>Total</dt>
+          <dd>{money(total)}</dd>
+        </div>
+      </dl>
+      {children}
+      <p className="mt-4 text-[11px] leading-5 text-[#737b82]">
+        Sample USD totals. No real payment is collected.
+      </p>
+    </aside>
+  );
+}
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-4 text-[#626a73]">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+}
+
+export function CheckoutPage() {
+  const demoDetails = {
+    name: "Olivia Bennett",
+    email: "olivia.bennett@example.demo",
+    phone: "(512) 555-0148",
+    address: "1842 Magnolia Avenue",
+    city: "Austin",
+    region: "TX",
+    postal: "78704",
+    country: "United States",
+  };
+  const { state, cartSubtotal, createOrder, recordEvent } = useDemo();
+  const router = useRouter();
+  const [fields, setFields] = useState(demoDetails);
+  const [delivery, setDelivery] = useState("Standard demo delivery");
+  const [method, setMethod] = useState("Demo card payment");
+  const [scenario, setScenario] = useState("success");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    recordEvent("checkout_start");
+  }, [recordEvent]);
+  const discount = state.discount ? cartSubtotal * 0.1 : 0;
+  const shipping = delivery.startsWith("Express") ? 32 : 18;
+  const tax = (cartSubtotal - discount + shipping) * 0.07;
+  const total = cartSubtotal - discount + shipping + tax;
+  const set = (k: string, v: string) => setFields((f) => ({ ...f, [k]: v }));
+  const pay = () => {
+    if (
+      !fields.name ||
+      !fields.email.includes("@") ||
+      !fields.address ||
+      !fields.city
+    ) {
+      setError("Complete the required customer and shipping fields.");
+      return;
+    }
+    if (!state.cart.length) {
+      setError("Your cart is empty.");
+      return;
+    }
+    const blocked = state.cart
+      .map((item) => cartIssue(state, item))
+      .find(Boolean);
+    if (blocked) {
+      setError(blocked);
+      return;
+    }
+    if (
+      fields.country === "United States" &&
+      (!/^[A-Za-z]{2}$/.test(fields.region) ||
+        !/^\d{5}(-\d{4})?$/.test(fields.postal) ||
+        (fields.phone && !/^(1)?\d{10}$/.test(fields.phone.replace(/\D/g, ""))))
+    ) {
+      setError(
+        "Use a two-letter US state, a valid ZIP code, and a 10-digit phone number.",
+      );
+      return;
+    }
+    if (scenario === "failure") {
+      setError(
+        "The unsuccessful demo payment was declined. Your cart and details are preserved.",
+      );
+      return;
+    }
+    const shippingAddress = [
+      fields.address,
+      fields.city,
+      fields.region,
+      fields.postal,
+      fields.country,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    const id = createOrder(
+      fields.name,
+      fields.email,
+      delivery,
+      shippingAddress,
+    );
+    if (!id) {
+      setError(
+        "Cart eligibility changed. Review your selections before checkout.",
+      );
+      return;
+    }
+    router.push(`/checkout/confirmation/${id}`);
+  };
+  return (
+    <>
+      <PageHero
+        eyebrow="Secure demo checkout"
+        title="Complete the simulated purchase."
+        copy="Choose a payment method and outcome without entering card numbers, CVV or payment tokens."
+      />
+      <section className="py-14">
+        <div className="site-container grid gap-10 lg:grid-cols-[1fr_390px]">
+          <div className="space-y-6">
+            <CheckoutSection title="Customer details">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Full name *"
+                  value={fields.name}
+                  onChange={(v) => set("name", v)}
+                />
+                <Field
+                  label="Email *"
+                  value={fields.email}
+                  onChange={(v) => set("email", v)}
+                  type="email"
+                />
+                <Field
+                  label="Phone"
+                  value={fields.phone}
+                  onChange={(v) => set("phone", v)}
+                  type="tel"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="self-end"
+                  onClick={() => setFields(demoDetails)}
+                >
+                  Restore US demo details
+                </Button>
+              </div>
+            </CheckoutSection>
+            <CheckoutSection title="Shipping address">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Field
+                    label="Street address *"
+                    value={fields.address}
+                    onChange={(v) => set("address", v)}
+                  />
+                </div>
+                <Field
+                  label="City *"
+                  value={fields.city}
+                  onChange={(v) => set("city", v)}
+                />
+                <Field
+                  label="State"
+                  value={fields.region}
+                  onChange={(v) => set("region", v)}
+                />
+                <Field
+                  label="ZIP code"
+                  value={fields.postal}
+                  onChange={(v) => set("postal", v)}
+                />
+                <Field
+                  label="Country"
+                  value={fields.country}
+                  onChange={(v) => set("country", v)}
+                />
+              </div>
+            </CheckoutSection>
+            <CheckoutSection title="Delivery option">
+              <RadioGroup
+                value={delivery}
+                onValueChange={setDelivery}
+                className="grid gap-3"
+              >
+                <Choice
+                  value="Standard demo delivery"
+                  title="Standard demo delivery"
+                  detail="$18.00 · Illustrative 5–7 business days"
+                />
+                <Choice
+                  value="Express demo delivery"
+                  title="Express demo delivery"
+                  detail="$32.00 · Illustrative 2–3 business days"
+                />
+              </RadioGroup>
+            </CheckoutSection>
+            <CheckoutSection title="Payment simulation">
+              <p className="mb-4 text-sm leading-6 text-[#626a73]">
+                No payment credentials are requested or stored. All totals and
+                outcomes are simulated.
+              </p>
+              <Label className="mb-2 block">Demo payment method</Label>
+              <RadioGroup
+                value={method}
+                onValueChange={setMethod}
+                className="mb-5 grid gap-3 sm:grid-cols-2"
+              >
+                <Choice
+                  value="Demo card payment"
+                  title="Demo Card Payment"
+                  detail="No card fields are collected."
+                />
+                <Choice
+                  value="Demo alternative payment"
+                  title="Demo Alternative Payment"
+                  detail="Simulated external-method choice."
+                />
+              </RadioGroup>
+              <Label className="mb-2 block">Outcome</Label>
+              <RadioGroup
+                value={scenario}
+                onValueChange={setScenario}
+                className="grid gap-3"
+              >
+                <Choice
+                  value="success"
+                  title="Simulate successful payment"
+                  detail={`Creates a paid demo order using ${method}.`}
+                />
+                <Choice
+                  value="failure"
+                  title="Simulate unsuccessful payment"
+                  detail="Preserves the form and cart, then offers retry."
+                />
+              </RadioGroup>
+              {error && (
+                <div className="mt-4 flex gap-3 rounded-xl border border-[#efcccc] bg-[#fff0f0] p-4 text-sm text-[#9f363a]">
+                  <CircleX className="size-5 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+              <Button
+                size="lg"
+                className="mt-6 w-full rounded-full bg-[#d96b36]"
+                onClick={pay}
+              >
+                {scenario === "success"
+                  ? `Place demo order · ${money(total)}`
+                  : "Run unsuccessful payment / retry"}
+              </Button>
+            </CheckoutSection>
+          </div>
+          <OrderSummary
+            subtotal={cartSubtotal}
+            discount={discount}
+            shipping={shipping}
+            tax={tax}
+            total={total}
+          >
+            <div className="mt-5 space-y-3 border-t pt-4">
+              {state.cart.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex justify-between gap-3 text-sm"
+                >
+                  <span>
+                    {item.qty} × {item.name}
+                  </span>
+                  <strong>{money(item.qty * item.price)}</strong>
+                </div>
+              ))}
+            </div>
+          </OrderSummary>
+        </div>
+      </section>
+    </>
+  );
+}
+function CheckoutSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-[20px] border border-[#e1e5e8] bg-white p-6">
+      <h2 className="mb-5 text-xl font-semibold">{title}</h2>
+      {children}
+    </section>
+  );
+}
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+}) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <Input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-2"
+      />
+    </div>
+  );
+}
+function Choice({
+  value,
+  title,
+  detail,
+}: {
+  value: string;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <Label
+      htmlFor={value}
+      className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#e1e5e8] p-4"
+    >
+      <RadioGroupItem id={value} value={value} />
+      <span>
+        <strong className="block text-sm">{title}</strong>
+        <span className="mt-1 block text-xs font-normal text-[#626a73]">
+          {detail}
+        </span>
+      </span>
+    </Label>
+  );
+}
+
+export function ConfirmationPage({ orderId }: { orderId: string }) {
+  const { state } = useDemo();
+  const order =
+    state.orders.find((o) => o.id === orderId) ||
+    state.orders.find((o) => o.id === state.lastOrderId);
+  if (!order) return <PageHero eyebrow="Order" title="Demo order not found" />;
+  return (
+    <section className="py-20">
+      <div className="site-container">
+        <div className="mx-auto max-w-4xl rounded-[28px] border border-[#e1e5e8] bg-white p-8 sm:p-12">
+          <span className="grid size-16 place-items-center rounded-full bg-[#e9f5ed] text-[#24764c]">
+            <CheckCircle2 className="size-8" />
+          </span>
+          <p className="mt-7 text-xs font-bold uppercase tracking-[.15em] text-[#626a73]">
+            Order confirmed
+          </p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-[-.05em]">
+            Thank you, {order.customer}.
+          </h1>
+          <p className="mt-4 leading-7 text-[#626a73]">
+            Demo order <strong>{order.id}</strong> has been created with a
+            simulated payment status. No funds were charged.
+          </p>
+          <div className="my-8 grid gap-4 rounded-2xl bg-[#f3f4f4] p-6 sm:grid-cols-2">
+            <div>
+              <span className="text-xs text-[#626a73]">Payment</span>
+              <div className="mt-1">
+                <StatusBadge status={order.payment} />
+              </div>
+            </div>
+            <div>
+              <span className="text-xs text-[#626a73]">Fulfillment</span>
+              <p className="mt-1 font-semibold">{order.fulfillment}</p>
+            </div>
+            <div>
+              <span className="text-xs text-[#626a73]">Delivery</span>
+              <p className="mt-1 font-semibold">{order.delivery}</p>
+            </div>
+            <div>
+              <span className="text-xs text-[#626a73]">Order total</span>
+              <p className="mt-1 font-semibold">{money(order.total)}</p>
+            </div>
+            <div className="sm:col-span-2">
+              <span className="text-xs text-[#626a73]">
+                Shipping information
+              </span>
+              <p className="mt-1 font-semibold">{order.shippingAddress}</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {order.items.map((i, idx) => (
+              <div
+                key={idx}
+                className="flex justify-between border-b pb-3 text-sm"
+              >
+                <span>
+                  {i.qty} × {i.name}
+                  <small className="mt-1 block text-[#626a73]">{i.meta}</small>
+                </span>
+                <strong>{money(i.qty * i.price)}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button className="rounded-full bg-[#171c22]" asChild>
+              <Link href={`/orders/status?order=${order.id}`}>
+                View order status
+              </Link>
+            </Button>
+            <Button variant="outline" className="rounded-full" asChild>
+              <Link href="/shop">Continue shopping</Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href="/installation-care">Installation guide</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function QuoteRequestPage() {
+  const { state, submitQuote } = useDemo();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [notes, setNotes] = useState("");
+  const [timing, setTiming] = useState("");
+  const [ref, setRef] = useState("");
+  const [error, setError] = useState("");
+  const vehicle = `${state.vehicle.year} ${state.vehicle.make} ${state.vehicle.model} · ${state.vehicle.body} · ${state.vehicle.trim}`;
+  const submit = () => {
+    if (!name || !email.includes("@")) {
+      setError("Enter a name and valid demo email.");
+      return;
+    }
+    setRef(submitQuote(name));
+  };
+  return (
+    <>
+      <PageHero
+        eyebrow="Quotation"
+        title="Tell us what you are planning."
+        copy="Submitting this form creates a Pending Review record. It does not charge you or create a production order."
+      />
+      <section className="py-14">
+        <div className="site-container max-w-4xl">
+          {ref ? (
+            <div className="rounded-[22px] border border-[#cde8d8] bg-[#edf8f1] p-8">
+              <CheckCircle2 className="size-10 text-[#24764c]" />
+              <h2 className="mt-5 text-3xl font-semibold">Quote submitted</h2>
+              <p className="mt-3 text-[#4f6658]">
+                Reference <strong>{ref}</strong> is Pending Review and now
+                appears in Admin Quotes & Artwork.
+              </p>
+              <dl className="mt-6 grid gap-3 rounded-xl bg-white/60 p-5 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-[#626a73]">Product</dt>
+                  <dd className="font-semibold">{state.sign.productType}</dd>
+                </div>
+                <div>
+                  <dt className="text-[#626a73]">Configuration</dt>
+                  <dd className="font-semibold">
+                    {state.sign.size} · {state.sign.material}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[#626a73]">Quantity</dt>
+                  <dd className="font-semibold">{state.sign.qty}</dd>
+                </div>
+                <div>
+                  <dt className="text-[#626a73]">Artwork</dt>
+                  <dd className="font-semibold">
+                    {state.sign.filename || "No artwork reference"}
+                  </dd>
+                </div>
+                {timing && (
+                  <div>
+                    <dt className="text-[#626a73]">Requested timing</dt>
+                    <dd className="font-semibold">{timing}</dd>
+                  </div>
+                )}
+              </dl>
+              <Button className="mt-6 rounded-full" asChild>
+                <Link href="/admin/quotes-artwork">View record in admin</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-[22px] border border-[#e1e5e8] bg-white p-7">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field
+                  label="Customer name *"
+                  value={name}
+                  onChange={setName}
+                />
+                <Field
+                  label="Email *"
+                  value={email}
+                  onChange={setEmail}
+                  type="email"
+                />
+                <Field
+                  label="Company name"
+                  value={company}
+                  onChange={setCompany}
+                />
+                <Field
+                  label="Product"
+                  value={state.sign.productType}
+                  onChange={() => {}}
+                />
+                <Field
+                  label="Size / material"
+                  value={`${state.sign.size} · ${state.sign.material}`}
+                  onChange={() => {}}
+                />
+                <Field
+                  label="Quantity"
+                  value={String(state.sign.qty)}
+                  onChange={() => {}}
+                />
+                <Field
+                  label="Vehicle details, if applicable"
+                  value={vehicle}
+                  onChange={() => {}}
+                />
+                <Field
+                  label="Artwork reference"
+                  value={state.sign.filename || "No artwork selected"}
+                  onChange={() => {}}
+                />
+                <Field
+                  label="Requested timing (optional)"
+                  value={timing}
+                  onChange={setTiming}
+                />
+                <div className="sm:col-span-2">
+                  <Label>Project notes</Label>
+                  <Textarea
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+              {error && <p className="mt-4 text-sm text-[#b83f43]">{error}</p>}
+              <Button
+                className="mt-6 rounded-full bg-[#d96b36]"
+                onClick={submit}
+              >
+                Submit quote request
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+export function OrderStatusPage() {
+  const { state, updateOrder } = useDemo();
+  const [ref, setRef] = useState(state.lastOrderId || "MS-10428");
+  const [email, setEmail] = useState("");
+  const [found, setFound] = useState<(typeof state.orders)[number] | null>(
+    null,
+  );
+  const [searched, setSearched] = useState(false);
+  const lookup = () => {
+    setSearched(true);
+    setFound(
+      state.orders.find(
+        (order) =>
+          order.id.toLowerCase() === ref.trim().toLowerCase() &&
+          (!email.trim() ||
+            order.email.toLowerCase() === email.trim().toLowerCase()),
+      ) || null,
+    );
+  };
+  return (
+    <>
+      <PageHero
+        eyebrow="Order status & help"
+        title="Track a demonstration order."
+        copy="Use MS-10428, MS-10396 or the reference created at checkout. Demo email is optional."
+      />
+      <section className="py-14">
+        <div className="site-container max-w-4xl">
+          <div className="grid gap-2 rounded-[18px] border border-[#e1e5e8] bg-white p-4 sm:grid-cols-[1fr_1fr_auto]">
+            <Input
+              value={ref}
+              onChange={(event) => setRef(event.target.value)}
+              placeholder="Order reference"
+              aria-label="Order reference"
+            />
+            <Input
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Demo email (optional)"
+              aria-label="Demo email"
+            />
+            <Button onClick={lookup}>Find order</Button>
+          </div>
+          {found === null ? (
+            <div className="mt-6 rounded-[18px] border border-[#e1e5e8] bg-white p-10 text-center">
+              <PackageSearch className="mx-auto size-9 text-[#d96b36]" />
+              <h2 className="mt-4 text-xl font-semibold">
+                {searched
+                  ? "No matching demonstration order"
+                  : "Enter a reference to view its progress"}
+              </h2>
+              <p className="mt-2 text-sm text-[#626a73]">
+                {searched
+                  ? "Check the order reference and optional email, then try again."
+                  : "Your lookup stays on this screen until a matching sample record is found."}
+              </p>
+              <Button variant="outline" className="mt-5 rounded-full" asChild>
+                <Link href="/shop">Continue shopping</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-6 rounded-[22px] border border-[#e1e5e8] bg-white p-7">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[.12em] text-[#626a73]">
+                    {found.id} · {found.date}
+                  </p>
+                  <h2 className="mt-2 text-3xl font-semibold">
+                    {found.fulfillment}
+                  </h2>
+                </div>
+                <StatusBadge status={found.payment} />
+              </div>
+              <p className="mt-4 text-sm text-[#626a73]">
+                {found.delivery} · Tracking placeholder DEMO-
+                {found.id.replace("MS-", "")}
+              </p>
+              <div className="my-8 grid gap-4 sm:grid-cols-4">
+                {found.timeline.map((item, index) => (
+                  <div
+                    key={`${item}-${index}`}
+                    className="border-t-2 border-[#d96b36] pt-3"
+                  >
+                    <span className="text-xs text-[#626a73]">
+                      Step {index + 1}
+                    </span>
+                    <p className="mt-1 text-sm font-semibold">{item}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3">
+                {found.items.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between border-b pb-3 text-sm"
+                  >
+                    <span>
+                      {item.qty} × {item.name}
+                      <small className="block text-[#626a73]">
+                        {item.meta}
+                      </small>
+                    </span>
+                    <strong>{money(item.qty * item.price)}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <RequestDialog
+                  label="Request cancellation"
+                  title="Request order cancellation"
+                  onConfirm={() => {
+                    updateOrder(found.id, {
+                      request: "Cancellation requested",
+                    });
+                    setFound({ ...found, request: "Cancellation requested" });
+                  }}
+                />
+                <RequestDialog
+                  label="Request refund"
+                  title="Request a demo refund"
+                  onConfirm={() => {
+                    updateOrder(found.id, { request: "Refund requested" });
+                    setFound({ ...found, request: "Refund requested" });
+                  }}
+                />
+                <Button variant="outline" className="rounded-full" asChild>
+                  <Link href="/contact">Contact support</Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                  <Link href="/faq">Browse FAQs</Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                  <Link href="/shop">Continue shopping</Link>
+                </Button>
+              </div>
+              {found.request !== "None" && (
+                <p className="mt-5 rounded-xl bg-[#fff8e9] p-4 text-sm text-[#8b5b15]">
+                  Current request: {found.request}. This is visible in Admin
+                  Orders.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+function RequestDialog({
+  label,
+  title,
+  onConfirm,
+}: {
+  label: string;
+  title: string;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="rounded-full">
+          {label}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            This updates the order with a review request. It does not issue a
+            real refund or cancel fulfillment.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Keep order</Button>
+          </DialogClose>
+          <DialogClose asChild>
+            <Button onClick={onConfirm}>Submit request</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

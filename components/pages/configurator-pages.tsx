@@ -1,123 +1,1562 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
-import { useEffect, useId, useRef, useState } from 'react';
-import { AlertTriangle, ArrowRight, CheckCircle2, FileImage, Minus, Plus, RotateCcw, Upload, XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { Textarea } from '@/components/ui/textarea';
-import { CarIllustration } from '@/components/car-illustration';
-import { PageHero, StatusBadge } from '@/components/page-primitives';
-import { useDemo } from '@/components/store/demo-provider';
-import { artworkStore } from '@/lib/artwork-storage';
-import { vehicleCatalog, vehiclePreviewFor } from '@/lib/demo-data';
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  FileImage,
+  Minus,
+  Plus,
+  RotateCcw,
+  Upload,
+  XCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { CarIllustration } from "@/components/car-illustration";
+import { PageHero, StatusBadge } from "@/components/page-primitives";
+import { useDemo } from "@/components/store/demo-provider";
+import { artworkStore } from "@/lib/artwork-storage";
+import { vehicleCatalog, vehiclePreviewFor } from "@/lib/demo-data";
 
 // Three.js is the heaviest dependency in the prototype; load it only when the
 // configurator route actually renders instead of every storefront page.
-const ThreeVehicleViewer=dynamic(()=>import('@/components/three-vehicle-viewer').then(module=>module.ThreeVehicleViewer),{ssr:false,loading:()=><div className="grid h-full place-items-center text-sm text-slate-600">Preparing vehicle preview…</div>});
+const ThreeVehicleViewer = dynamic(
+  () =>
+    import("@/components/three-vehicle-viewer").then(
+      (module) => module.ThreeVehicleViewer,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="grid h-full place-items-center text-sm text-slate-600">
+        Preparing vehicle preview…
+      </div>
+    ),
+  },
+);
 
-const steps=['Vehicle','Coverage','Appearance','Compatibility','Continue'];
-function ConfigSteps({active}:{active:number}){return <div className="site-container grid grid-cols-5 py-7">{steps.map((s,i)=><div key={s} className={`border-t-2 pt-3 text-[9px] sm:text-xs ${i<=active?'border-[#d96b36] font-bold text-[#b95025]':'border-[#d9dde0] text-[#737b82]'}`}>{s}</div>)}</div>}
-
-export function VehicleSelectionPage(){
-  const {state,setVehicle,setShade}=useDemo(); const router=useRouter(); const [error,setError]=useState('');
-  const years=[...new Set(vehicleCatalog.map(item=>item.year))].sort((a,b)=>Number(b)-Number(a));
-  const byYear=vehicleCatalog.filter(item=>item.year===state.vehicle.year);
-  const makes=[...new Set(byYear.map(item=>item.make))].sort();
-  const byMake=byYear.filter(item=>item.make===state.vehicle.make);
-  const models=[...new Set(byMake.map(item=>item.model))].sort();
-  const byModel=byMake.filter(item=>item.model===state.vehicle.model);
-  const bodies=[...new Set(byModel.map(item=>item.body))];
-  const selectedRecord=byModel.find(item=>item.body===state.vehicle.body);
-  const trims=selectedRecord?.trims??[];
-  const previewType=vehiclePreviewFor(state.vehicle);
-  const vehicleLabel=[state.vehicle.year,state.vehicle.make,state.vehicle.model].filter(Boolean).join(' ')||'Select a vehicle';
-  const go=()=>{if(!state.vehicle.year||!state.vehicle.make||!state.vehicle.model||!state.vehicle.body||!state.vehicle.trim){setError('Complete all five vehicle fields to continue.');return;}const fitment=state.fitments.find(f=>f.year===state.vehicle.year&&f.make===state.vehicle.make&&f.model===state.vehicle.model&&f.body===state.vehicle.body&&f.trim===state.vehicle.trim&&f.sku===state.shade.productSku);setShade({zones:fitment?.zones.filter(zone=>zone==='Driver front'||zone==='Passenger front')??['Driver front','Passenger front']});router.push('/configure/vehicle/preview')};
-  return <><PageHero eyebrow="Vehicle shade configurator" title="Start with your vehicle." copy="Choose from realistic US-market demo vehicles. Every field narrows the options that follow."/><ConfigSteps active={0}/><section className="pb-20"><div className="site-container grid items-center gap-10 lg:grid-cols-[1.05fr_.95fr]"><div className="relative grid min-h-[430px] place-items-center overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_50%_45%,#eceeef,#c6ccd0_52%,#a8b0b6)]"><CarIllustration vehicleType={previewType} label={vehicleLabel} className="w-[92%]"/><span className="absolute bottom-4 left-4 rounded-md bg-[#101419cc] px-2.5 py-1.5 text-[11px] text-white">Vehicle-specific illustrative preview</span></div><div className="rounded-[22px] border border-[#e1e5e8] bg-white p-7 sm:p-9"><h2 className="text-2xl font-semibold">Vehicle details</h2><p className="mt-2 text-sm leading-6 text-[#626a73]">Year, make, model, body style, and trim stay linked to prevent invalid combinations.</p><div className="mt-7 grid gap-5 sm:grid-cols-2"><Picker label="Year" value={state.vehicle.year} options={years} onChange={year=>setVehicle({year,make:'',model:'',body:'',trim:''})}/><Picker label="Make" value={state.vehicle.make} options={makes} disabled={!state.vehicle.year} onChange={make=>setVehicle({make,model:'',body:'',trim:''})}/><Picker label="Model" value={state.vehicle.model} options={models} disabled={!state.vehicle.make} onChange={model=>setVehicle({model,body:'',trim:''})}/><Picker label="Body style" value={state.vehicle.body} options={bodies} disabled={!state.vehicle.model} onChange={body=>setVehicle({body,trim:''})}/><div className="sm:col-span-2"><Picker label="Trim" value={state.vehicle.trim} options={trims} disabled={!state.vehicle.body} onChange={trim=>setVehicle({trim})}/></div></div>{error&&<p className="mt-4 text-sm font-medium text-[#b83f43]">{error}</p>}<div className="mt-7 flex flex-wrap gap-3"><Button className="rounded-full bg-[#d96b36] px-6 hover:bg-[#b95025]" onClick={go}>Continue to configurator <ArrowRight/></Button><Button variant="outline" className="rounded-full" asChild><Link href="/configure/fitment-request">Can&apos;t find your vehicle?</Link></Button></div><div className="mt-7 rounded-xl bg-[#f1f3f4] p-4 text-xs leading-5 text-[#626a73]">Demo paths: 2023 Toyota Corolla · Sedan · LE is Verified; 2022 Ford F-150 · Crew Cab · XLT Needs Confirmation; 2024 Honda Civic · Sedan · Touring is Unsupported.</div></div></div></section></>;
-}
-function Picker({label,value,options,onChange,disabled=false}:{label:string;value:string;options:string[];onChange:(v:string)=>void;disabled?:boolean}){const id=useId();return <div className="min-w-0"><Label htmlFor={id}>{label}</Label><Select value={value} onValueChange={onChange} disabled={disabled}><SelectTrigger id={id} className="mt-2 h-12 w-full bg-white"><SelectValue placeholder={`Select ${label.toLowerCase()}`}/></SelectTrigger><SelectContent position="popper" align="start" sideOffset={6} className="min-w-[var(--radix-select-trigger-width)]">{options.map(o=><SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></div>}
-
-export function ConfiguratorPage(){
-  const {state,setShade,currentFitment,recordEvent}=useDemo();
-  const [resetSignal,setResetSignal]=useState(0);
-  const edgeColors:{name:string;hex:string}[]=[{name:'Graphite',hex:'#252b31'},{name:'Copper',hex:'#d96b36'},{name:'Sand',hex:'#c7ad86'}];
-  const supported=['Driver front','Driver rear','Passenger front','Passenger rear','Windshield'];
-  const views=['Three-quarter','Front','Rear','Driver side','Passenger side'];
-  const shadeProducts=state.products.filter(product=>product.category==='vehicle-shades'&&product.eligibility==='configure');
-  const selectedProduct=shadeProducts.find(product=>product.sku===state.shade.productSku)??shadeProducts[0];
-  const previewType=vehiclePreviewFor(state.vehicle);
-  const vehicleName=`${state.vehicle.year} ${state.vehicle.make} ${state.vehicle.model} · ${state.vehicle.body} · ${state.vehicle.trim}`;
-  useEffect(()=>{recordEvent('configurator_start')},[recordEvent]);
-  const toggleZone=(zone:string)=>{if(!currentFitment.zones.includes(zone))return;setShade({zones:state.shade.zones.includes(zone)?state.shade.zones.filter(z=>z!==zone):[...state.shade.zones,zone]})};
-  const selectProduct=(productSku:string)=>{const fitment=state.fitments.find(f=>f.year===state.vehicle.year&&f.make===state.vehicle.make&&f.model===state.vehicle.model&&f.body===state.vehicle.body&&f.trim===state.vehicle.trim&&f.sku===productSku);const defaults=fitment?.zones.filter(zone=>zone==='Driver front'||zone==='Passenger front')??(productSku==='MS-CP-118'?['Driver front','Passenger front']:['Driver front','Passenger front']);setShade({productSku,zones:defaults})};
-  const canCheck=currentFitment.status==='Unsupported'||state.shade.zones.length>0;
-  const coverageControls=<div className="grid gap-2">{supported.map(zone=>{const allowed=currentFitment.zones.includes(zone);return <label key={zone} className={`flex items-start gap-3 rounded-xl border p-3 text-sm ${allowed?'bg-white':'bg-[#f5f5f4] text-[#9aa0a5]'}`}><Checkbox checked={state.shade.zones.includes(zone)} onCheckedChange={()=>toggleZone(zone)} disabled={!allowed}/><span><strong className="block font-medium">{zone}</strong>{!allowed&&<small>Not supported by this product and demo fitment record</small>}</span></label>})}</div>;
-  const appearanceControls=<div><Label>Shade product</Label><Select value={state.shade.productSku} onValueChange={selectProduct}><SelectTrigger className="mt-2 w-full"><SelectValue/></SelectTrigger><SelectContent position="popper" align="start" sideOffset={6}>{shadeProducts.map(product=><SelectItem key={product.sku} value={product.sku}>{product.name} · {product.sku}</SelectItem>)}</SelectContent></Select><Label className="mt-5 block">Mesh</Label><Select value={state.shade.mesh} onValueChange={mesh=>setShade({mesh})}><SelectTrigger className="mt-2 w-full"><SelectValue/></SelectTrigger><SelectContent position="popper" align="start" sideOffset={6}><SelectItem value="Performance mesh">Performance mesh</SelectItem><SelectItem value="Privacy mesh">Privacy mesh</SelectItem></SelectContent></Select><Label className="mt-5 block">Edge color</Label><div className="mt-2 flex gap-2">{edgeColors.map(edge=><button key={edge.name} aria-label={`${edge.name} edge`} title={`${edge.name} edge`} onClick={()=>setShade({edge:edge.name})} className={`size-10 rounded-full border-4 ${state.shade.edge===edge.name?'border-[#d96b36]':'border-white'} shadow`} style={{background:edge.hex}}/>)}</div></div>;
-  const summary=<><dl className="grid gap-3 text-sm">{[['Vehicle',vehicleName],['Product',`${selectedProduct?.name??'Shade product'} · ${state.shade.productSku}`],['Coverage',state.shade.zones.join(', ')||'None selected'],['Mesh',state.shade.mesh],['Edge',state.shade.edge],['Compatibility',currentFitment.status],['Availability',selectedProduct&&selectedProduct.inventory>0?`${selectedProduct.inventory} demo units`:'Unavailable'],['View',state.shade.view]].map(([label,value])=><div key={label} className="flex justify-between gap-4 border-b border-[#e1e5e8] pb-3"><dt className="text-[#626a73]">{label}</dt><dd className="text-right font-semibold">{value}</dd></div>)}</dl><div className="mt-5 flex items-center justify-between"><span className="text-sm text-[#626a73]">Demo price</span><strong className="text-xl">{selectedProduct?.price?`$${selectedProduct.price.toFixed(2)}`:'Unavailable'}</strong></div><Button className="mt-6 w-full rounded-full bg-[#d96b36] hover:bg-[#b95025]" disabled={!canCheck} asChild={canCheck}>{canCheck?<Link href="/configure/fitment-result">Check compatibility</Link>:<span>Select coverage</span>}</Button><Button variant="ghost" className="mt-2 w-full" onClick={()=>{setShade({zones:['Driver front','Passenger front'],mesh:'Performance mesh',edge:'Copper',zoom:1,angle:0,view:'Three-quarter',productSku:'MS-AE-240'});setResetSignal(value=>value+1)}}>Reset configuration</Button></>;
-  return <><ConfigSteps active={2}/><section className="pb-36 xl:pb-16"><div className="site-container"><div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-sm text-[#626a73]">{vehicleName}</p><h1 className="mt-2 text-3xl font-semibold tracking-[-.04em] sm:text-4xl">Build your shade configuration.</h1></div><StatusBadge status={currentFitment.status}/></div><div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)_310px]"><aside className="hidden space-y-4 xl:block"><Panel title="Coverage zones">{coverageControls}</Panel><Panel title="Appearance">{appearanceControls}</Panel></aside><div className="relative h-[500px] self-start overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_50%_45%,#eef0f1,#c5cbd0_50%,#a8b0b6_78%)] sm:h-[600px] xl:sticky xl:top-24"><ThreeVehicleViewer zones={state.shade.zones} edge={edgeColors.find(edge=>edge.name===state.shade.edge)?.hex??'#d96b36'} mesh={state.shade.mesh} angle={state.shade.angle} zoom={state.shade.zoom} view={state.shade.view} resetSignal={resetSignal} vehicle={state.vehicle} vehicleType={previewType}/><div className="absolute right-4 top-4 z-20 flex gap-2"><Button variant="secondary" size="icon" title="Zoom out" onClick={()=>setShade({zoom:Math.max(.75,state.shade.zoom-.1)})} aria-label="Zoom out"><Minus/></Button><Button variant="secondary" size="icon" title="Zoom in" onClick={()=>setShade({zoom:Math.min(1.25,state.shade.zoom+.1)})} aria-label="Zoom in"><Plus/></Button><Button variant="secondary" size="icon" title="Reset camera" onClick={()=>{setShade({zoom:1,angle:0,view:'Three-quarter'});setResetSignal(value=>value+1)}} aria-label="Reset view"><RotateCcw/></Button></div><div className="absolute left-1/2 top-28 z-20 w-[45%] -translate-x-1/2 sm:top-6 sm:w-[38%]"><Slider value={[state.shade.angle]} min={-180} max={180} step={1} onValueChange={([angle])=>setShade({angle})} aria-label="Rotate vehicle preview"/></div><div className="absolute inset-x-3 bottom-[92px] z-20 rounded-xl bg-[#101419df] p-3 text-white backdrop-blur sm:inset-x-4 sm:bottom-4"><div className="flex flex-col gap-3"><span className="text-[11px] text-[#d3d8dc]">Vehicle-specific interactive preview · Drag to orbit · Scroll to zoom · Illustrative, not a fitment scan.</span><div className="flex flex-wrap gap-1.5">{views.map(view=><Button key={view} size="sm" title={`${view} view`} variant="outline" className={`border-white/20 text-[11px] text-white ${state.shade.view===view?'bg-[#d96b36] hover:bg-[#b95025]':'bg-white/10 hover:bg-white/20'}`} onClick={()=>setShade({angle:0,view})}><span className="sm:hidden">{view==='Three-quarter'?'3/4':view==='Passenger side'?'Pass.':view.replace(' side','')}</span><span className="hidden sm:inline">{view.replace(' side','')}</span></Button>)}</div></div></div></div><aside className="hidden xl:block"><div className="sticky top-24"><Panel title="Your configuration">{summary}</Panel><div className="mt-4 rounded-xl border border-[#e1e5e8] bg-white p-4 text-xs leading-5 text-[#626a73]">Mount only to compatible exterior metal body or door-frame areas described by the current sample record. No direct glass attachment.</div></div></aside></div><div className="mt-5 grid gap-3 xl:hidden"><details className="rounded-2xl border bg-white p-4"><summary className="cursor-pointer font-semibold">Coverage zones · {state.shade.zones.length} selected</summary><div className="mt-4">{coverageControls}</div></details><details className="rounded-2xl border bg-white p-4"><summary className="cursor-pointer font-semibold">Appearance · {state.shade.edge} edge</summary><div className="mt-4">{appearanceControls}</div></details></div><div className="mt-5 xl:hidden"><details className="rounded-2xl border bg-white p-5"><summary className="cursor-pointer font-semibold">Full configuration summary</summary><div className="mt-5">{summary}</div></details></div><div className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(16,20,25,.16)] backdrop-blur xl:hidden"><div className="mx-auto flex max-w-2xl items-center justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold text-[#28333c]">{state.shade.productSku} · {state.shade.zones.length} zones</p><p className="text-[11px] leading-4 text-[#626a73]">{state.shade.mesh} · {state.shade.edge} · {currentFitment.status}</p><strong>{selectedProduct?.price?`$${selectedProduct.price.toFixed(2)}`:'Unavailable'}</strong></div><Button className="shrink-0 rounded-full bg-[#d96b36]" disabled={!canCheck} asChild={canCheck}>{canCheck?<Link href="/configure/fitment-result">Check compatibility</Link>:<span>Select coverage</span>}</Button></div></div></div></section></>;
-}
-function Panel({title,children}:{title:string;children:React.ReactNode}){return <section className="rounded-[18px] border border-[#e1e5e8] bg-white p-5"><h2 className="mb-4 text-lg font-semibold">{title}</h2>{children}</section>}
-
-export function FitmentResultPage(){
-  const {state,currentFitment,addShadeToCart}=useDemo(); const product=state.products.find(item=>item.sku===state.shade.productSku); const status=currentFitment.status; const verified=status==='Verified'; const confirm=status==='Needs Confirmation'; const selectedValid=state.shade.zones.every(zone=>currentFitment.zones.includes(zone)); const canBuy=verified&&selectedValid&&state.shade.zones.length>0&&!!product&&product.inventory>0&&product.price>0&&product.status==='Active';
-  return <><ConfigSteps active={3}/><section className="pb-20"><div className="site-container"><div className="mx-auto max-w-4xl rounded-[26px] border border-[#e1e5e8] bg-white p-7 sm:p-11"><div className={`grid size-16 place-items-center rounded-full ${verified?'bg-[#e9f5ed] text-[#24764c]':confirm?'bg-[#fff3da] text-[#a46a13]':'bg-[#fee9e9] text-[#b83f43]'}`}>{verified?<CheckCircle2/>:confirm?<AlertTriangle/>:<XCircle/>}</div><p className="mt-7 text-sm font-bold uppercase tracking-[.14em] text-[#626a73]">Compatibility result</p><h1 className="mt-2 text-4xl font-semibold tracking-[-.05em]">{verified?'Verified in demo records':confirm?'Manual confirmation required':'Configuration unsupported'}</h1><p className="mt-4 max-w-2xl leading-7 text-[#626a73]">{verified?'The selected coverage is eligible within the current mock record when product price, inventory and variation rules are valid. This is not a claim of physical validation.':confirm?'This sample vehicle needs a fitment review before purchase. Submit the selected vehicle, product, appearance, and coverage for manual confirmation.':'The selected vehicle, product or coverage does not have an eligible configuration in the current demonstration records.'}</p><div className="my-8 grid gap-3 rounded-2xl bg-[#f3f4f4] p-5 sm:grid-cols-2"><Summary label="Vehicle" value={`${state.vehicle.year} ${state.vehicle.make} ${state.vehicle.model} · ${state.vehicle.body} · ${state.vehicle.trim}`}/><Summary label="Record" value={`${currentFitment.id} · ${currentFitment.revision?`Rev ${currentFitment.revision}`:'Awaiting review'}`}/><Summary label="Product" value={`${product?.name??'Shade product'} · ${state.shade.productSku}`}/><Summary label="Availability" value={product&&product.inventory>0?`${product.inventory} demo units · $${product.price.toFixed(2)}`:'Unavailable'}/><Summary label="Coverage" value={state.shade.zones.join(', ')||'None'}/><Summary label="Edge / mesh" value={`${state.shade.edge} · ${state.shade.mesh}`}/><Summary label="Install note" value={currentFitment.notes}/><Summary label="Exclusions" value={currentFitment.exclusions}/></div><div className="flex flex-wrap gap-3">{canBuy&&<Button className="rounded-full bg-[#d96b36]" onClick={addShadeToCart} asChild><Link href="/cart">Add configuration to cart</Link></Button>}{!verified&&<Button className="rounded-full bg-[#d96b36]" asChild><Link href="/configure/fitment-request">Request fitment confirmation</Link></Button>}<Button variant="outline" className="rounded-full" asChild><Link href="/configure/vehicle">Change vehicle</Link></Button><Button variant="outline" className="rounded-full" asChild><Link href="/configure/vehicle/preview">Change coverage</Link></Button>{!verified&&<Button variant="ghost" asChild><Link href="/contact">Contact support</Link></Button>}</div>{verified&&!canBuy&&<p className="mt-5 rounded-xl bg-[#fff8e9] p-4 text-sm text-[#805519]">The fitment record is verified, but checkout remains blocked because coverage, price, inventory, or product status is not currently eligible.</p>}</div></div></section></>;
-}
-function Summary({label,value}:{label:string;value:string}){return <div><dt className="text-xs text-[#737b82]">{label}</dt><dd className="mt-1 text-sm font-semibold">{value}</dd></div>}
-
-export function FitmentRequestPage(){
-  const {state,setVehicle,submitFitmentRequest}=useDemo(); const [name,setName]=useState('');const [email,setEmail]=useState('');const [notes,setNotes]=useState('');const [ref,setRef]=useState('');const [error,setError]=useState('');
-  const submit=()=>{if(!name.trim()||!email.includes('@')||!state.vehicle.year||!state.vehicle.make||!state.vehicle.model||!state.vehicle.body||!state.vehicle.trim){setError('Complete your contact and vehicle details before requesting review.');return;}setRef(submitFitmentRequest(name,email,notes));};
-  return <><PageHero eyebrow="Fitment assistance" title="Request a manual fitment review." copy="Your selected vehicle and shade options are prefilled. No purchase or payment is created."/>
-  <section className="py-14"><div className="site-container max-w-4xl">{ref?<div className="rounded-[22px] border border-[#cde8d8] bg-[#edf8f1] p-8"><CheckCircle2 className="size-10 text-[#24764c]"/><h2 className="mt-5 text-3xl font-semibold">Request received</h2><p className="mt-3 text-[#4f6658]">Reference <strong>{ref}</strong> is Pending Review with the vehicle, SKU, coverage, mesh, and edge selection preserved in Admin Fitment Management.</p><Button className="mt-6 rounded-full" asChild><Link href="/admin/fitments">View in admin demo</Link></Button></div>:<div className="rounded-[22px] border border-[#e1e5e8] bg-white p-7"><div className="grid gap-5 sm:grid-cols-2"><Field label="Customer name" value={name} onChange={setName}/><Field label="Email" value={email} onChange={setEmail} type="email"/><Field label="Year" value={state.vehicle.year} onChange={year=>setVehicle({year})}/><Field label="Make" value={state.vehicle.make} onChange={make=>setVehicle({make})}/><Field label="Model" value={state.vehicle.model} onChange={model=>setVehicle({model})}/><Field label="Body style" value={state.vehicle.body} onChange={body=>setVehicle({body})}/><Field label="Trim" value={state.vehicle.trim} onChange={trim=>setVehicle({trim})}/><Field label="Product SKU" value={state.shade.productSku} disabled/><Field label="Selected coverage" value={state.shade.zones.join(', ')||'None selected'} disabled/><Field label="Appearance" value={`${state.shade.mesh} · ${state.shade.edge} edge`} disabled/><div className="sm:col-span-2"><Label>Additional notes</Label><Textarea value={notes} onChange={e=>setNotes(e.target.value)} className="mt-2" placeholder="Share panel, body-style or installation details…"/></div></div>{error&&<p className="mt-4 text-sm text-[#b83f43]">{error}</p>}<Button className="mt-6 rounded-full bg-[#d96b36]" onClick={submit}>Submit fitment request</Button></div>}</div></section></>;
-}
-function Field({label,value,onChange,type='text',disabled=false}:{label:string;value:string;onChange?:(v:string)=>void;type?:string;disabled?:boolean}){const id=useId();return <div><Label htmlFor={id}>{label}</Label><Input id={id} type={type} value={value} disabled={disabled} onChange={e=>onChange?.(e.target.value)} className="mt-2"/></div>}
-
-export function SignDesignPage(){
-  const {state,setSign,artworkPreview}=useDemo();
-  const router=useRouter();
-  const price=state.sign.size==='24 × 36 in'||state.sign.productType==='Studio Magnetic Panel'?0:(state.sign.size==='12 × 18 in'?74:126)*state.sign.qty;
-  const invalidateProof=()=>state.sign.filename?'Artwork Uploaded':'Awaiting Artwork';
-  const revise=(patch:Partial<typeof state.sign>)=>setSign({...patch,proofStatus:invalidateProof(),requestedChanges:''});
-  return <><PageHero eyebrow="Magnetic sign studio" title="Shape the message before the artwork." copy="Choose product, dimensions, material, placement and quantity. Quote-only configurations remain outside paid checkout."/><section className="py-14"><div className="site-container grid gap-7 lg:grid-cols-[1.15fr_.85fr]"><div className="relative grid min-h-[590px] place-items-center overflow-hidden rounded-[24px] bg-[linear-gradient(145deg,#2b3036,#11161a)]"><SignPreview sign={state.sign} previewUrl={artworkPreview}/><span className="absolute bottom-4 left-4 rounded bg-black/40 px-2 py-1 text-[11px] text-white">Illustrative sign preview</span></div><div className="rounded-[20px] border border-[#e1e5e8] bg-white p-7"><h2 className="text-2xl font-semibold">Sign details</h2><div className="mt-6 grid gap-5"><Picker label="Product type" value={state.sign.productType} options={['Fleetmark Door Pair','Studio Magnetic Panel']} onChange={productType=>revise({productType})}/><Picker label="Dimensions" value={state.sign.size} options={['12 × 18 in','18 × 24 in','24 × 36 in']} onChange={size=>revise({size})}/><Picker label="Material" value={state.sign.material} options={['Matte magnetic','Gloss magnetic','High-tack magnetic']} onChange={material=>revise({material})}/><Picker label="Artwork alignment" value={state.sign.alignment} options={['Left aligned','Centered','Right aligned']} onChange={alignment=>revise({alignment})}/><div><Label>Base color</Label><div className="mt-2 flex gap-2">{['#f5f3ee','#d96b36','#171c22'].map(color=><button key={color} aria-label={`Select ${color} base color`} onClick={()=>revise({color})} style={{background:color}} className={`size-10 rounded-full border-4 shadow ${state.sign.color===color?'border-[#d96b36]':'border-white'}`}/>)}</div></div><div><Label>Quantity</Label><div className="mt-2 inline-flex items-center overflow-hidden rounded-full border"><button aria-label="Decrease quantity" className="size-11" onClick={()=>setSign({qty:Math.max(1,state.sign.qty-1)})}>−</button><span className="grid w-10 place-items-center font-bold">{state.sign.qty}</span><button aria-label="Increase quantity" className="size-11" onClick={()=>setSign({qty:state.sign.qty+1})}>+</button></div></div><label className="flex items-center gap-3 rounded-xl bg-[#f4f5f5] p-4"><Checkbox checked={state.sign.assist} onCheckedChange={value=>setSign({assist:!!value})}/><span className="text-sm font-medium">I need help preparing my artwork</span></label>{state.sign.assist&&<Textarea value={state.sign.assistNotes} onChange={event=>setSign({assistNotes:event.target.value})} placeholder="Describe the design help you need…"/>}</div><div className="mt-7 flex items-end justify-between border-t pt-5"><span className="text-sm text-[#626a73]">{price?'Demo total after approved proof':'Pricing path'}</span><strong className="text-xl">{price?`$${price.toFixed(2)}`:'Request quote'}</strong></div><Button className="mt-6 w-full rounded-full bg-[#d96b36]" onClick={()=>router.push('/custom-signs/artwork')}>Continue to artwork <ArrowRight/></Button></div></div></section></>;
+const steps = [
+  "Vehicle",
+  "Coverage",
+  "Appearance",
+  "Compatibility",
+  "Continue",
+];
+function ConfigSteps({ active }: { active: number }) {
+  return (
+    <div className="site-container grid grid-cols-5 py-7">
+      {steps.map((s, i) => (
+        <div
+          key={s}
+          className={`border-t-2 pt-3 text-[9px] sm:text-xs ${i <= active ? "border-[#d96b36] font-bold text-[#b95025]" : "border-[#d9dde0] text-[#737b82]"}`}
+        >
+          {s}
+        </div>
+      ))}
+    </div>
+  );
 }
 
-export function ArtworkPage(){
-  const {state,setSign,addSignToCart,artworkPreview:previewUrl,setArtworkPreview:setPreviewUrl}=useDemo(); const inputRef=useRef<HTMLInputElement>(null); const [fileError,setFileError]=useState(''); const [changes,setChanges]=useState(state.sign.requestedChanges); const uploadSequence=useRef(0);
-  const choose=async(file?:File)=>{
-    if(!file)return;const seq=++uploadSequence.current;const ext=file.name.split('.').pop()?.toLowerCase();
-    if(!['png','jpg','jpeg','pdf'].includes(ext||'')){setFileError('Use PNG, JPG, JPEG or PDF.');return;}
-    if(file.size>10*1024*1024){setFileError('File must be 10 MB or smaller.');return;}
-    setFileError('');
-    try {
-      let url='';let artworkKey='';
-      if(ext!=='pdf'){
-        url=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(file);});
-        const image=new Image();image.src=url;await image.decode();
-        artworkKey=crypto.randomUUID();await artworkStore(artworkKey,url);
-      }
-      if(seq!==uploadSequence.current)return;
-      setPreviewUrl(url);setSign({artworkKey,filename:file.name,proofStatus:'Artwork Uploaded',requestedChanges:''});
-    }catch{setFileError('Could not read or save this image locally. Try another JPG or PNG, or enable browser storage.');}
+export function VehicleSelectionPage() {
+  const { state, setVehicle, setShade } = useDemo();
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const years = [...new Set(vehicleCatalog.map((item) => item.year))].sort(
+    (a, b) => Number(b) - Number(a),
+  );
+  const byYear = vehicleCatalog.filter(
+    (item) => item.year === state.vehicle.year,
+  );
+  const makes = [...new Set(byYear.map((item) => item.make))].sort();
+  const byMake = byYear.filter((item) => item.make === state.vehicle.make);
+  const models = [...new Set(byMake.map((item) => item.model))].sort();
+  const byModel = byMake.filter((item) => item.model === state.vehicle.model);
+  const bodies = [...new Set(byModel.map((item) => item.body))];
+  const selectedRecord = byModel.find(
+    (item) => item.body === state.vehicle.body,
+  );
+  const trims = selectedRecord?.trims ?? [];
+  const previewType = vehiclePreviewFor(state.vehicle);
+  const vehicleLabel =
+    [state.vehicle.year, state.vehicle.make, state.vehicle.model]
+      .filter(Boolean)
+      .join(" ") || "Select a vehicle";
+  const go = () => {
+    if (
+      !state.vehicle.year ||
+      !state.vehicle.make ||
+      !state.vehicle.model ||
+      !state.vehicle.body ||
+      !state.vehicle.trim
+    ) {
+      setError("Complete all five vehicle fields to continue.");
+      return;
+    }
+    const fitment = state.fitments.find(
+      (f) =>
+        f.year === state.vehicle.year &&
+        f.make === state.vehicle.make &&
+        f.model === state.vehicle.model &&
+        f.body === state.vehicle.body &&
+        f.trim === state.vehicle.trim &&
+        f.sku === state.shade.productSku,
+    );
+    setShade({
+      zones: fitment?.zones.filter(
+        (zone) => zone === "Driver front" || zone === "Passenger front",
+      ) ?? ["Driver front", "Passenger front"],
+    });
+    router.push("/configure/vehicle/preview");
   };
-  const quoteOnly=state.sign.size==='24 × 36 in'||state.sign.productType==='Studio Magnetic Panel';
-  const imageMissing=!!state.sign.filename&&!state.sign.filename.toLowerCase().endsWith('.pdf')&&!previewUrl;
-  const canRequestProof=!imageMissing&&['Artwork Uploaded','Revision Requested'].includes(state.sign.proofStatus);
-  const proofReady=!imageMissing&&state.sign.proofStatus==='Proof Prepared';
-  return <><PageHero eyebrow="Artwork & proof" title="Review the sign before the next step." copy="Upload artwork, request a simulated proof, then approve it or request changes. Approval never creates a production order."/><section className="py-14"><div className="site-container grid gap-7 lg:grid-cols-[.8fr_1.2fr]"><div className="rounded-[20px] border border-[#e1e5e8] bg-white p-7"><h2 className="text-2xl font-semibold">Artwork upload</h2><div onDragOver={event=>event.preventDefault()} onDrop={event=>{event.preventDefault();choose(event.dataTransfer.files?.[0])}} className="mt-6 rounded-2xl border-2 border-dashed border-[#b8bfc4] bg-[#fafafa] p-9 text-center"><Upload className="mx-auto size-8 text-[#d96b36]"/><p className="mt-4 font-semibold">Drag artwork here or browse</p><p className="mt-2 text-xs text-[#626a73]">PNG, JPG, JPEG or PDF · Maximum 10 MB</p><input ref={inputRef} type="file" accept=".png,.jpg,.jpeg,.pdf" className="hidden" onChange={event=>choose(event.target.files?.[0])}/><Button variant="outline" className="mt-5 rounded-full" onClick={()=>inputRef.current?.click()}>Browse files</Button></div>{fileError&&<p className="mt-3 text-sm text-[#b83f43]">{fileError}</p>}{state.sign.filename&&<div className="mt-4 flex items-center gap-3 rounded-xl bg-[#f1f3f4] p-4"><FileImage className="text-[#d96b36]"/><div className="min-w-0 flex-1"><strong className="block truncate text-sm">{state.sign.filename}</strong><span className="text-xs text-[#626a73]">Artwork is saved in this browser for preview and proof review.</span></div><Button variant="ghost" size="sm" onClick={()=>{uploadSequence.current++;setPreviewUrl('');setSign({artworkKey:'',filename:'',proofStatus:'Awaiting Artwork',requestedChanges:''})}}>Remove</Button></div>}<label className="mt-5 flex items-center gap-3"><Checkbox checked={state.sign.assist} onCheckedChange={value=>setSign({assist:!!value})}/><span className="text-sm">I need help preparing my artwork.</span></label>{state.sign.assist&&<Textarea className="mt-3" value={state.sign.assistNotes} onChange={event=>setSign({assistNotes:event.target.value})} placeholder="Describe the design support you need…"/>}</div><div className="rounded-[20px] border border-[#e1e5e8] bg-[#f0f1ef] p-7"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs uppercase tracking-[.12em] text-[#626a73]">Proof version {state.sign.requestedChanges?2:1}</p><h2 className="mt-1 text-2xl font-semibold">Magnetic sign proof</h2></div><StatusBadge status={state.sign.proofStatus}/></div><p className="mt-4 text-sm leading-6 text-[#626a73]">{state.sign.proofStatus==='Awaiting Artwork'?'Upload artwork to begin.':state.sign.proofStatus==='Artwork Uploaded'?'Artwork is placed at the selected dimensions and ready for a proof request.':state.sign.proofStatus==='Proof Prepared'?'The simulated proof is ready for approval or revision.':state.sign.proofStatus==='Revision Requested'?'Submit the requested revision for a new proof.':'Approved proof is eligible for its configured purchase path.'}</p><div className="my-7 grid min-h-[320px] place-items-center rounded-xl bg-[#232a30] p-8"><SignPreview sign={state.sign} previewUrl={previewUrl}/></div>{imageMissing&&<p className="mb-4 text-sm text-amber-800">Loading saved image. If it does not appear, replace the artwork before approving the proof.</p>}{state.sign.requestedChanges&&<div className="mb-5 rounded-xl bg-[#fff8e9] p-4 text-sm text-[#805519]"><strong>Requested changes</strong><p className="mt-1">{state.sign.requestedChanges}</p></div>}<div className="flex flex-wrap gap-3"><Button disabled={!canRequestProof} className="rounded-full bg-[#171c22]" onClick={()=>setSign({proofStatus:'Proof Prepared'})}>{state.sign.proofStatus==='Revision Requested'?'Request revised proof':'Request proof'}</Button><Dialog><DialogTrigger asChild><Button disabled={!proofReady} className="rounded-full bg-[#24764c]">Approve proof</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Approve this proof?</DialogTitle><DialogDescription>Approval marks the artwork ready for the next demo step. It does not create a production order or charge.</DialogDescription></DialogHeader><DialogFooter><DialogClose asChild><Button onClick={()=>setSign({proofStatus:'Approved'})}>Confirm approval</Button></DialogClose></DialogFooter></DialogContent></Dialog><Dialog><DialogTrigger asChild><Button disabled={!proofReady} variant="outline" className="rounded-full">Request changes</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Request a proof revision</DialogTitle><DialogDescription>Describe the changes needed for the next sample proof version.</DialogDescription></DialogHeader><Textarea value={changes} onChange={event=>setChanges(event.target.value)} placeholder="Move the logo up and increase the phone number size…"/><DialogFooter><DialogClose asChild><Button disabled={!changes.trim()} onClick={()=>setSign({proofStatus:'Revision Requested',requestedChanges:changes})}>Submit revision</Button></DialogClose></DialogFooter></DialogContent></Dialog><Button variant="outline" className="rounded-full" onClick={()=>inputRef.current?.click()}>Replace artwork</Button>{quoteOnly?<Button className="rounded-full bg-[#d96b36]" disabled={imageMissing||state.sign.proofStatus!=='Approved'} asChild={state.sign.proofStatus==='Approved'}>{state.sign.proofStatus==='Approved'?<Link href="/quote/request">Request quote</Link>:<span>Approve proof to continue</span>}</Button>:<Button className="rounded-full bg-[#d96b36]" disabled={imageMissing||state.sign.proofStatus!=='Approved'} onClick={addSignToCart}>{state.sign.proofStatus==='Approved'?'Add approved sign to cart':'Approve proof to continue'}</Button>}</div></div></div></section></>;
+  return (
+    <>
+      <PageHero
+        eyebrow="Vehicle shade configurator"
+        title="Start with your vehicle."
+        copy="Choose the exact year, make, model, body style and trim. Finding a vehicle here does not mean a shade has been verified for it."
+      />
+      <ConfigSteps active={0} />
+      <section className="pb-20">
+        <div className="site-container grid items-center gap-10 lg:grid-cols-[1.05fr_.95fr]">
+          <div className="relative grid min-h-[430px] place-items-center overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_50%_45%,#eceeef,#c6ccd0_52%,#a8b0b6)]">
+            <CarIllustration
+              vehicleType={previewType}
+              label={vehicleLabel}
+              className="w-[92%]"
+            />
+            <span className="absolute bottom-4 left-4 rounded-md bg-[#101419cc] px-2.5 py-1.5 text-[11px] text-white">
+              Vehicle-specific illustrative preview
+            </span>
+          </div>
+          <div className="rounded-[22px] border border-[#e1e5e8] bg-white p-7 sm:p-9">
+            <h2 className="text-2xl font-semibold">Vehicle details</h2>
+            <p className="mt-2 text-sm leading-6 text-[#626a73]">
+              Each field narrows the next one, so invalid vehicle combinations
+              cannot be selected.
+            </p>
+            <div className="mt-7 grid gap-5 sm:grid-cols-2">
+              <Picker
+                label="Year"
+                value={state.vehicle.year}
+                options={years}
+                onChange={(year) =>
+                  setVehicle({ year, make: "", model: "", body: "", trim: "" })
+                }
+              />
+              <Picker
+                label="Make"
+                value={state.vehicle.make}
+                options={makes}
+                disabled={!state.vehicle.year}
+                onChange={(make) =>
+                  setVehicle({ make, model: "", body: "", trim: "" })
+                }
+              />
+              <Picker
+                label="Model"
+                value={state.vehicle.model}
+                options={models}
+                disabled={!state.vehicle.make}
+                onChange={(model) => setVehicle({ model, body: "", trim: "" })}
+              />
+              <Picker
+                label="Body style"
+                value={state.vehicle.body}
+                options={bodies}
+                disabled={!state.vehicle.model}
+                onChange={(body) => setVehicle({ body, trim: "" })}
+              />
+              <div className="sm:col-span-2">
+                <Picker
+                  label="Trim"
+                  value={state.vehicle.trim}
+                  options={trims}
+                  disabled={!state.vehicle.body}
+                  onChange={(trim) => setVehicle({ trim })}
+                />
+              </div>
+            </div>
+            {error && (
+              <p className="mt-4 text-sm font-medium text-[#b83f43]">{error}</p>
+            )}
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Button
+                className="rounded-full bg-[#d96b36] px-6 hover:bg-[#b95025]"
+                onClick={go}
+              >
+                Continue to configurator <ArrowRight />
+              </Button>
+              <Button variant="outline" className="rounded-full" asChild>
+                <Link href="/configure/fitment-request">
+                  Can&apos;t find your car?
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+function Picker({
+  label,
+  value,
+  options,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const id = useId();
+  return (
+    <div className="min-w-0">
+      <Label htmlFor={id}>{label}</Label>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger id={id} className="mt-2 h-12 w-full bg-white">
+          <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+        </SelectTrigger>
+        <SelectContent
+          position="popper"
+          align="start"
+          sideOffset={6}
+          className="min-w-[var(--radix-select-trigger-width)]"
+        >
+          {options.map((o) => (
+            <SelectItem key={o} value={o}>
+              {o}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
-function SignPreview({sign,previewUrl}:{sign:ReturnType<typeof useDemo>['state']['sign'];previewUrl:string}) {
-  const ratio=sign.size==='18 × 24 in'?'4 / 3':'3 / 2';
-  return <div className="relative grid w-full max-w-[480px] overflow-hidden rounded-md border-[5px] border-white/80 p-4 shadow-2xl" style={{background:sign.color,aspectRatio:ratio}}>
-    {previewUrl?<img src={previewUrl} alt={`Uploaded artwork preview: ${sign.filename}`} className="absolute inset-3 h-[calc(100%-24px)] w-[calc(100%-24px)] object-contain" style={{objectPosition:sign.alignment==='Left aligned'?'left':sign.alignment==='Right aligned'?'right':'center'}}/>:<div className="grid place-content-center text-center text-slate-500"><FileImage className="mx-auto mb-3 size-9"/><strong>{sign.filename.toLowerCase().endsWith('.pdf')?'PDF artwork reference':sign.filename?'Image preview unavailable':'Your artwork here'}</strong><span className="mt-2 text-xs">{sign.filename||'Upload a JPG or PNG to preview your sign'}</span></div>}
-    {sign.material==='Gloss magnetic'&&<div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent_30%,#ffffff55_48%,transparent_65%)]"/>}
-    <span className="absolute bottom-1 right-1 rounded bg-white/95 px-2 py-1 text-[9px] font-bold text-slate-700">{sign.size} · {sign.material}</span>
-  </div>;
+export function ConfiguratorPage() {
+  const { state, setShade, currentFitment, recordEvent } = useDemo();
+  const [resetSignal, setResetSignal] = useState(0);
+  const edgeColors: { name: string; hex: string }[] = [
+    { name: "Graphite", hex: "#252b31" },
+    { name: "Copper", hex: "#d96b36" },
+    { name: "Sand", hex: "#c7ad86" },
+  ];
+  const supported = [
+    "Driver front",
+    "Driver rear",
+    "Passenger front",
+    "Passenger rear",
+    "Windshield",
+  ];
+  const views = [
+    "Three-quarter",
+    "Front",
+    "Rear",
+    "Driver side",
+    "Passenger side",
+  ];
+  const shadeProducts = state.products.filter(
+    (product) =>
+      product.category === "vehicle-shades" &&
+      product.eligibility === "configure",
+  );
+  const selectedProduct =
+    shadeProducts.find((product) => product.sku === state.shade.productSku) ??
+    shadeProducts[0];
+  const previewType = vehiclePreviewFor(state.vehicle);
+  const vehicleName = `${state.vehicle.year} ${state.vehicle.make} ${state.vehicle.model} · ${state.vehicle.body} · ${state.vehicle.trim}`;
+  useEffect(() => {
+    recordEvent("configurator_start");
+  }, [recordEvent]);
+  const toggleZone = (zone: string) => {
+    if (!currentFitment.zones.includes(zone)) return;
+    setShade({
+      zones: state.shade.zones.includes(zone)
+        ? state.shade.zones.filter((z) => z !== zone)
+        : [...state.shade.zones, zone],
+    });
+  };
+  const selectProduct = (productSku: string) => {
+    const fitment = state.fitments.find(
+      (f) =>
+        f.year === state.vehicle.year &&
+        f.make === state.vehicle.make &&
+        f.model === state.vehicle.model &&
+        f.body === state.vehicle.body &&
+        f.trim === state.vehicle.trim &&
+        f.sku === productSku,
+    );
+    const defaults =
+      fitment?.zones.filter(
+        (zone) => zone === "Driver front" || zone === "Passenger front",
+      ) ??
+      (productSku === "MS-CP-118"
+        ? ["Driver front", "Passenger front"]
+        : ["Driver front", "Passenger front"]);
+    setShade({ productSku, zones: defaults });
+  };
+  const canCheck =
+    currentFitment.status === "Not Compatible" || state.shade.zones.length > 0;
+  const coverageControls = (
+    <div className="grid gap-2">
+      {supported.map((zone) => {
+        const allowed = currentFitment.zones.includes(zone);
+        return (
+          <label
+            key={zone}
+            className={`flex items-start gap-3 rounded-xl border p-3 text-sm ${allowed ? "bg-white" : "bg-[#f5f5f4] text-[#9aa0a5]"}`}
+          >
+            <Checkbox
+              checked={state.shade.zones.includes(zone)}
+              onCheckedChange={() => toggleZone(zone)}
+              disabled={!allowed}
+            />
+            <span>
+              <strong className="block font-medium">{zone}</strong>
+              {!allowed && (
+                <small>
+                  Not available for this product and compatibility result
+                </small>
+              )}
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+  const appearanceControls = (
+    <div>
+      <Label>Shade product</Label>
+      <Select value={state.shade.productSku} onValueChange={selectProduct}>
+        <SelectTrigger className="mt-2 w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent position="popper" align="start" sideOffset={6}>
+          {shadeProducts.map((product) => (
+            <SelectItem key={product.sku} value={product.sku}>
+              {product.name} · {product.sku}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Label className="mt-5 block">Mesh</Label>
+      <Select
+        value={state.shade.mesh}
+        onValueChange={(mesh) => setShade({ mesh })}
+      >
+        <SelectTrigger className="mt-2 w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent position="popper" align="start" sideOffset={6}>
+          <SelectItem value="Performance mesh">Performance mesh</SelectItem>
+          <SelectItem value="Privacy mesh">Privacy mesh</SelectItem>
+        </SelectContent>
+      </Select>
+      <Label className="mt-5 block">Edge color</Label>
+      <div className="mt-2 flex gap-2">
+        {edgeColors.map((edge) => (
+          <button
+            key={edge.name}
+            aria-label={`${edge.name} edge`}
+            title={`${edge.name} edge`}
+            onClick={() => setShade({ edge: edge.name })}
+            className={`size-10 rounded-full border-4 ${state.shade.edge === edge.name ? "border-[#d96b36]" : "border-white"} shadow`}
+            style={{ background: edge.hex }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+  const summary = (
+    <>
+      <dl className="grid gap-3 text-sm">
+        {[
+          ["Vehicle", vehicleName],
+          [
+            "Product",
+            `${selectedProduct?.name ?? "Shade product"} · ${state.shade.productSku}`,
+          ],
+          ["Coverage", state.shade.zones.join(", ") || "None selected"],
+          ["Mesh", state.shade.mesh],
+          ["Edge", state.shade.edge],
+          ["Compatibility", currentFitment.status],
+          [
+            "Availability",
+            selectedProduct && selectedProduct.inventory > 0
+              ? `${selectedProduct.inventory} demo units`
+              : "Unavailable",
+          ],
+          ["View", state.shade.view],
+        ].map(([label, value]) => (
+          <div
+            key={label}
+            className="flex justify-between gap-4 border-b border-[#e1e5e8] pb-3"
+          >
+            <dt className="text-[#626a73]">{label}</dt>
+            <dd className="text-right font-semibold">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-5 flex items-center justify-between">
+        <span className="text-sm text-[#626a73]">Demo price</span>
+        <strong className="text-xl">
+          {selectedProduct?.price
+            ? `$${selectedProduct.price.toFixed(2)}`
+            : "Unavailable"}
+        </strong>
+      </div>
+      <Button
+        className="mt-6 w-full rounded-full bg-[#d96b36] hover:bg-[#b95025]"
+        disabled={!canCheck}
+        asChild={canCheck}
+      >
+        {canCheck ? (
+          <Link href="/configure/fitment-result">Check compatibility</Link>
+        ) : (
+          <span>Select coverage</span>
+        )}
+      </Button>
+      <Button
+        variant="ghost"
+        className="mt-2 w-full"
+        onClick={() => {
+          setShade({
+            zones: ["Driver front", "Passenger front"],
+            mesh: "Performance mesh",
+            edge: "Copper",
+            zoom: 1,
+            angle: 0,
+            view: "Three-quarter",
+            productSku: "MS-AE-240",
+          });
+          setResetSignal((value) => value + 1);
+        }}
+      >
+        Reset configuration
+      </Button>
+    </>
+  );
+  return (
+    <>
+      <ConfigSteps active={2} />
+      <section className="pb-36 xl:pb-16">
+        <div className="site-container">
+          <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm text-[#626a73]">{vehicleName}</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-[-.04em] sm:text-4xl">
+                Build your shade configuration.
+              </h1>
+            </div>
+            <StatusBadge status={currentFitment.status} />
+          </div>
+          <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)_310px]">
+            <aside className="hidden space-y-4 xl:block">
+              <Panel title="Coverage zones">{coverageControls}</Panel>
+              <Panel title="Appearance">{appearanceControls}</Panel>
+            </aside>
+            <div className="relative h-[500px] self-start overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_50%_45%,#eef0f1,#c5cbd0_50%,#a8b0b6_78%)] sm:h-[600px] xl:sticky xl:top-24">
+              <ThreeVehicleViewer
+                zones={state.shade.zones}
+                edge={
+                  edgeColors.find((edge) => edge.name === state.shade.edge)
+                    ?.hex ?? "#d96b36"
+                }
+                mesh={state.shade.mesh}
+                angle={state.shade.angle}
+                zoom={state.shade.zoom}
+                view={state.shade.view}
+                resetSignal={resetSignal}
+                vehicle={state.vehicle}
+                vehicleType={previewType}
+              />
+              <div className="absolute right-4 top-4 z-20 flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  title="Zoom out"
+                  onClick={() =>
+                    setShade({ zoom: Math.max(0.75, state.shade.zoom - 0.1) })
+                  }
+                  aria-label="Zoom out"
+                >
+                  <Minus />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  title="Zoom in"
+                  onClick={() =>
+                    setShade({ zoom: Math.min(1.25, state.shade.zoom + 0.1) })
+                  }
+                  aria-label="Zoom in"
+                >
+                  <Plus />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  title="Reset camera"
+                  onClick={() => {
+                    setShade({ zoom: 1, angle: 0, view: "Three-quarter" });
+                    setResetSignal((value) => value + 1);
+                  }}
+                  aria-label="Reset view"
+                >
+                  <RotateCcw />
+                </Button>
+              </div>
+              <div className="absolute left-1/2 top-28 z-20 w-[45%] -translate-x-1/2 sm:top-6 sm:w-[38%]">
+                <Slider
+                  value={[state.shade.angle]}
+                  min={-180}
+                  max={180}
+                  step={1}
+                  onValueChange={([angle]) => setShade({ angle })}
+                  aria-label="Rotate vehicle preview"
+                />
+              </div>
+              <div className="absolute inset-x-3 bottom-[92px] z-20 rounded-xl bg-[#101419df] p-3 text-white backdrop-blur sm:inset-x-4 sm:bottom-4">
+                <div className="flex flex-col gap-3">
+                  <span className="text-[11px] text-[#d3d8dc]">
+                    Vehicle-specific interactive preview · Drag to orbit ·
+                    Scroll to zoom · Illustrative, not a fitment scan.
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {views.map((view) => (
+                      <Button
+                        key={view}
+                        size="sm"
+                        title={`${view} view`}
+                        variant="outline"
+                        className={`border-white/20 text-[11px] text-white ${state.shade.view === view ? "bg-[#d96b36] hover:bg-[#b95025]" : "bg-white/10 hover:bg-white/20"}`}
+                        onClick={() => setShade({ angle: 0, view })}
+                      >
+                        <span className="sm:hidden">
+                          {view === "Three-quarter"
+                            ? "3/4"
+                            : view === "Passenger side"
+                              ? "Pass."
+                              : view.replace(" side", "")}
+                        </span>
+                        <span className="hidden sm:inline">
+                          {view.replace(" side", "")}
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <aside className="hidden xl:block">
+              <div className="sticky top-24">
+                <Panel title="Your configuration">{summary}</Panel>
+                <div className="mt-4 rounded-xl border border-[#e1e5e8] bg-white p-4 text-xs leading-5 text-[#626a73]">
+                  Mount only to compatible exterior metal body or door-frame
+                  areas described by the current sample record. No direct glass
+                  attachment.
+                </div>
+              </div>
+            </aside>
+          </div>
+          <div className="mt-5 grid gap-3 xl:hidden">
+            <details className="rounded-2xl border bg-white p-4">
+              <summary className="cursor-pointer font-semibold">
+                Coverage zones · {state.shade.zones.length} selected
+              </summary>
+              <div className="mt-4">{coverageControls}</div>
+            </details>
+            <details className="rounded-2xl border bg-white p-4">
+              <summary className="cursor-pointer font-semibold">
+                Appearance · {state.shade.edge} edge
+              </summary>
+              <div className="mt-4">{appearanceControls}</div>
+            </details>
+          </div>
+          <div className="mt-5 xl:hidden">
+            <details className="rounded-2xl border bg-white p-5">
+              <summary className="cursor-pointer font-semibold">
+                Full configuration summary
+              </summary>
+              <div className="mt-5">{summary}</div>
+            </details>
+          </div>
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(16,20,25,.16)] backdrop-blur xl:hidden">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#28333c]">
+                  {state.shade.productSku} · {state.shade.zones.length} zones
+                </p>
+                <p className="text-[11px] leading-4 text-[#626a73]">
+                  {state.shade.mesh} · {state.shade.edge} ·{" "}
+                  {currentFitment.status}
+                </p>
+                <strong>
+                  {selectedProduct?.price
+                    ? `$${selectedProduct.price.toFixed(2)}`
+                    : "Unavailable"}
+                </strong>
+              </div>
+              <Button
+                className="shrink-0 rounded-full bg-[#d96b36]"
+                disabled={!canCheck}
+                asChild={canCheck}
+              >
+                {canCheck ? (
+                  <Link href="/configure/fitment-result">
+                    Check compatibility
+                  </Link>
+                ) : (
+                  <span>Select coverage</span>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+function Panel({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-[18px] border border-[#e1e5e8] bg-white p-5">
+      <h2 className="mb-4 text-lg font-semibold">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+export function FitmentResultPage() {
+  const { state, currentFitment, addShadeToCart } = useDemo();
+  const product = state.products.find(
+    (item) => item.sku === state.shade.productSku,
+  );
+  const status = currentFitment.status;
+  const verified = status === "Verified";
+  const confirm = status === "Needs Confirmation";
+  const selectedValid = state.shade.zones.every((zone) =>
+    currentFitment.zones.includes(zone),
+  );
+  const canBuy =
+    verified &&
+    selectedValid &&
+    state.shade.zones.length > 0 &&
+    !!product &&
+    product.inventory > 0 &&
+    product.price > 0 &&
+    product.status === "Active";
+  return (
+    <>
+      <ConfigSteps active={3} />
+      <section className="pb-20">
+        <div className="site-container">
+          <div className="mx-auto max-w-4xl rounded-[26px] border border-[#e1e5e8] bg-white p-7 sm:p-11">
+            <div
+              className={`grid size-16 place-items-center rounded-full ${verified ? "bg-[#e9f5ed] text-[#24764c]" : confirm ? "bg-[#fff3da] text-[#a46a13]" : "bg-[#fee9e9] text-[#b83f43]"}`}
+            >
+              {verified ? (
+                <CheckCircle2 />
+              ) : confirm ? (
+                <AlertTriangle />
+              ) : (
+                <XCircle />
+              )}
+            </div>
+            <p className="mt-7 text-sm font-bold uppercase tracking-[.14em] text-[#626a73]">
+              Compatibility result
+            </p>
+            <h1 className="mt-2 text-4xl font-semibold tracking-[-.05em]">
+              {verified
+                ? "Verified"
+                : confirm
+                  ? "Needs Confirmation"
+                  : "Not Compatible"}
+            </h1>
+            <p className="mt-4 max-w-2xl leading-7 text-[#626a73]">
+              {verified
+                ? "This shade and selected coverage are confirmed for the vehicle shown below and may be purchased."
+                : confirm
+                  ? "Compatibility has not yet been verified. Send this saved configuration for a fitment check before purchasing."
+                  : "This shade is confirmed not to fit the selected vehicle. Change the vehicle or shade selection to continue."}
+            </p>
+            <div className="my-8 grid gap-3 rounded-2xl bg-[#f3f4f4] p-5 sm:grid-cols-2">
+              <Summary
+                label="Vehicle"
+                value={`${state.vehicle.year} ${state.vehicle.make} ${state.vehicle.model} · ${state.vehicle.body} · ${state.vehicle.trim}`}
+              />
+              <Summary
+                label="Product"
+                value={`${product?.name ?? "Shade product"} · ${state.shade.productSku}`}
+              />
+              <Summary
+                label="Availability"
+                value={
+                  product && product.inventory > 0
+                    ? `${product.inventory} units · $${product.price.toFixed(2)}`
+                    : "Unavailable"
+                }
+              />
+              <Summary
+                label="Coverage"
+                value={state.shade.zones.join(", ") || "None"}
+              />
+              <Summary
+                label="Edge / mesh"
+                value={`${state.shade.edge} · ${state.shade.mesh}`}
+              />
+              <Summary label="Install note" value={currentFitment.notes} />
+              <Summary label="Exclusions" value={currentFitment.exclusions} />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {canBuy && (
+                <Button
+                  className="rounded-full bg-[#d96b36]"
+                  onClick={addShadeToCart}
+                  asChild
+                >
+                  <Link href="/cart">Add configuration to cart</Link>
+                </Button>
+              )}
+              {confirm && (
+                <Button className="rounded-full bg-[#d96b36]" asChild>
+                  <Link href="/configure/fitment-request">
+                    Request fitment confirmation
+                  </Link>
+                </Button>
+              )}
+              <Button variant="outline" className="rounded-full" asChild>
+                <Link href="/configure/vehicle">Change vehicle</Link>
+              </Button>
+              <Button variant="outline" className="rounded-full" asChild>
+                <Link href="/configure/vehicle/preview">Change coverage</Link>
+              </Button>
+              {confirm && (
+                <Button variant="ghost" asChild>
+                  <Link href="/contact">Contact support</Link>
+                </Button>
+              )}
+            </div>
+            {verified && !canBuy && (
+              <p className="mt-5 rounded-xl bg-[#fff8e9] p-4 text-sm text-[#805519]">
+                Compatibility is verified, but checkout remains blocked because
+                coverage, price, inventory, or product status is not currently
+                eligible.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+function Summary({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-[#737b82]">{label}</dt>
+      <dd className="mt-1 text-sm font-semibold">{value}</dd>
+    </div>
+  );
+}
+
+export function FitmentRequestPage() {
+  const { state, submitFitmentRequest } = useDemo();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [ref, setRef] = useState("");
+  const [error, setError] = useState("");
+  const submit = () => {
+    if (
+      !name.trim() ||
+      !email.includes("@") ||
+      !state.vehicle.year ||
+      !state.vehicle.make ||
+      !state.vehicle.model ||
+      !state.vehicle.body ||
+      !state.vehicle.trim
+    ) {
+      setError(
+        "Complete your name, email and vehicle details before requesting review.",
+      );
+      return;
+    }
+    setRef(submitFitmentRequest(name, email, phone, notes));
+  };
+  return (
+    <>
+      <PageHero
+        eyebrow="Fitment assistance"
+        title="Request a fitment confirmation."
+        copy="We will review the exact vehicle, shade product, coverage and finish saved below. This does not create a purchase or payment."
+      />
+      <section className="py-14">
+        <div className="site-container max-w-4xl">
+          {ref ? (
+            <div className="rounded-[22px] border border-[#cde8d8] bg-[#edf8f1] p-8">
+              <CheckCircle2 className="size-10 text-[#24764c]" />
+              <h2 className="mt-5 text-3xl font-semibold">Request saved</h2>
+              <p className="mt-3 text-[#4f6658]">
+                Reference <strong>{ref}</strong> includes your contact details
+                and complete saved configuration.
+              </p>
+              <div className="mt-5 rounded-xl bg-white/70 p-4 text-sm leading-6 text-[#4f6658]">
+                <strong>What happens next</strong>
+                <p>
+                  This prototype adds the request to the local admin fitment
+                  queue. It does not currently email the business or customer.
+                  The business must connect its inbox/CRM and confirm its
+                  response-time promise before launch.
+                </p>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button className="rounded-full" asChild>
+                  <Link href="/configure/vehicle/preview">
+                    Return to configuration
+                  </Link>
+                </Button>
+                <Button variant="outline" className="rounded-full" asChild>
+                  <Link href="/admin/fitments">View saved request</Link>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[22px] border border-[#e1e5e8] bg-white p-7">
+              <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                <div>
+                  <h2 className="text-2xl font-semibold">
+                    Your fitment request
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-[#626a73]">
+                    Check the details, add your contact information, then
+                    submit. Your selections stay saved if you go back to make
+                    changes.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="shrink-0 rounded-full"
+                  asChild
+                >
+                  <Link href="/configure/vehicle/preview">
+                    Edit configuration
+                  </Link>
+                </Button>
+              </div>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field
+                  label="Customer name *"
+                  value={name}
+                  onChange={setName}
+                />
+                <Field
+                  label="Email *"
+                  value={email}
+                  onChange={setEmail}
+                  type="email"
+                />
+                <Field
+                  label="Phone (optional)"
+                  value={phone}
+                  onChange={setPhone}
+                  type="tel"
+                />
+                <div />
+                <Field label="Year" value={state.vehicle.year} disabled />
+                <Field label="Make" value={state.vehicle.make} disabled />
+                <Field label="Model" value={state.vehicle.model} disabled />
+                <Field label="Body style" value={state.vehicle.body} disabled />
+                <Field label="Trim" value={state.vehicle.trim} disabled />
+                <Field
+                  label="Product SKU"
+                  value={state.shade.productSku}
+                  disabled
+                />
+                <Field
+                  label="Selected coverage"
+                  value={state.shade.zones.join(", ") || "None selected"}
+                  disabled
+                />
+                <Field
+                  label="Appearance"
+                  value={`${state.shade.mesh} · ${state.shade.edge} edge`}
+                  disabled
+                />
+                <div className="sm:col-span-2">
+                  <Label>Additional notes</Label>
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="mt-2"
+                    placeholder="Share panel, body-style or installation details…"
+                  />
+                </div>
+              </div>
+              <div className="mt-6 rounded-xl bg-[#f1f3f4] p-4 text-sm leading-6 text-[#626a73]">
+                <strong>After you submit</strong>
+                <p>
+                  Your request is saved for fitment review. Customer
+                  confirmation and response timing are not yet connected in this
+                  prototype and require the business&apos;s approved process.
+                </p>
+              </div>
+              {error && <p className="mt-4 text-sm text-[#b83f43]">{error}</p>}
+              <Button
+                className="mt-6 rounded-full bg-[#d96b36]"
+                onClick={submit}
+              >
+                Submit fitment request
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange?: (v: string) => void;
+  type?: string;
+  disabled?: boolean;
+}) {
+  const id = useId();
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        type={type}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange?.(e.target.value)}
+        className="mt-2"
+      />
+    </div>
+  );
+}
+
+export function SignDesignPage() {
+  const { state, setSign, artworkPreview } = useDemo();
+  const router = useRouter();
+  const price =
+    state.sign.size === "24 × 36 in" ||
+    state.sign.productType === "Studio Magnetic Panel"
+      ? 0
+      : (state.sign.size === "12 × 18 in" ? 74 : 126) * state.sign.qty;
+  const invalidateProof = () =>
+    state.sign.filename ? "Artwork Uploaded" : "Awaiting Artwork";
+  const revise = (patch: Partial<typeof state.sign>) =>
+    setSign({ ...patch, proofStatus: invalidateProof(), requestedChanges: "" });
+  return (
+    <>
+      <PageHero
+        eyebrow="Magnetic sign studio"
+        title="Shape the message before the artwork."
+        copy="Choose product, dimensions, material, placement and quantity. Quote-only configurations remain outside paid checkout."
+      />
+      <section className="py-14">
+        <div className="site-container grid gap-7 lg:grid-cols-[1.15fr_.85fr]">
+          <div className="relative grid min-h-[590px] place-items-center overflow-hidden rounded-[24px] bg-[linear-gradient(145deg,#2b3036,#11161a)]">
+            <SignPreview sign={state.sign} previewUrl={artworkPreview} />
+            <span className="absolute bottom-4 left-4 rounded bg-black/40 px-2 py-1 text-[11px] text-white">
+              Illustrative sign preview
+            </span>
+          </div>
+          <div className="rounded-[20px] border border-[#e1e5e8] bg-white p-7">
+            <h2 className="text-2xl font-semibold">Sign details</h2>
+            <div className="mt-6 grid gap-5">
+              <Picker
+                label="Product type"
+                value={state.sign.productType}
+                options={["Fleetmark Door Pair", "Studio Magnetic Panel"]}
+                onChange={(productType) => revise({ productType })}
+              />
+              <Picker
+                label="Dimensions"
+                value={state.sign.size}
+                options={["12 × 18 in", "18 × 24 in", "24 × 36 in"]}
+                onChange={(size) => revise({ size })}
+              />
+              <Picker
+                label="Material"
+                value={state.sign.material}
+                options={[
+                  "Matte magnetic",
+                  "Gloss magnetic",
+                  "High-tack magnetic",
+                ]}
+                onChange={(material) => revise({ material })}
+              />
+              <Picker
+                label="Artwork alignment"
+                value={state.sign.alignment}
+                options={["Left aligned", "Centered", "Right aligned"]}
+                onChange={(alignment) => revise({ alignment })}
+              />
+              <div>
+                <Label>Base color</Label>
+                <div className="mt-2 flex gap-2">
+                  {["#f5f3ee", "#d96b36", "#171c22"].map((color) => (
+                    <button
+                      key={color}
+                      aria-label={`Select ${color} base color`}
+                      onClick={() => revise({ color })}
+                      style={{ background: color }}
+                      className={`size-10 rounded-full border-4 shadow ${state.sign.color === color ? "border-[#d96b36]" : "border-white"}`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label>Quantity</Label>
+                <div className="mt-2 inline-flex items-center overflow-hidden rounded-full border">
+                  <button
+                    aria-label="Decrease quantity"
+                    className="size-11"
+                    onClick={() =>
+                      setSign({ qty: Math.max(1, state.sign.qty - 1) })
+                    }
+                  >
+                    −
+                  </button>
+                  <span className="grid w-10 place-items-center font-bold">
+                    {state.sign.qty}
+                  </span>
+                  <button
+                    aria-label="Increase quantity"
+                    className="size-11"
+                    onClick={() => setSign({ qty: state.sign.qty + 1 })}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <label className="flex items-center gap-3 rounded-xl bg-[#f4f5f5] p-4">
+                <Checkbox
+                  checked={state.sign.assist}
+                  onCheckedChange={(value) => setSign({ assist: !!value })}
+                />
+                <span className="text-sm font-medium">
+                  I need help preparing my artwork
+                </span>
+              </label>
+              {state.sign.assist && (
+                <Textarea
+                  value={state.sign.assistNotes}
+                  onChange={(event) =>
+                    setSign({ assistNotes: event.target.value })
+                  }
+                  placeholder="Describe the design help you need…"
+                />
+              )}
+            </div>
+            <div className="mt-7 flex items-end justify-between border-t pt-5">
+              <span className="text-sm text-[#626a73]">
+                {price ? "Demo total after approved proof" : "Pricing path"}
+              </span>
+              <strong className="text-xl">
+                {price ? `$${price.toFixed(2)}` : "Request quote"}
+              </strong>
+            </div>
+            <Button
+              className="mt-6 w-full rounded-full bg-[#d96b36]"
+              onClick={() => router.push("/custom-signs/artwork")}
+            >
+              Continue to artwork <ArrowRight />
+            </Button>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+export function ArtworkPage() {
+  const {
+    state,
+    setSign,
+    approveSignProof,
+    addSignToCart,
+    artworkPreview: previewUrl,
+    setArtworkPreview: setPreviewUrl,
+  } = useDemo();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [fileError, setFileError] = useState("");
+  const [changes, setChanges] = useState(state.sign.requestedChanges);
+  const uploadSequence = useRef(0);
+  const choose = async (file?: File) => {
+    if (!file) return;
+    const seq = ++uploadSequence.current;
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!["png", "jpg", "jpeg", "pdf"].includes(ext || "")) {
+      setFileError("Use PNG, JPG, JPEG or PDF.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setFileError("File must be 10 MB or smaller.");
+      return;
+    }
+    setFileError("");
+    try {
+      let url = "";
+      let artworkKey = "";
+      if (ext !== "pdf") {
+        url = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+        const [shortSide, longSide] = state.sign.size
+          .match(/\d+/g)
+          ?.map(Number) ?? [18, 24];
+        const requiredShort = shortSide * 150;
+        const requiredLong = longSide * 150;
+        const actualShort = Math.min(image.naturalWidth, image.naturalHeight);
+        const actualLong = Math.max(image.naturalWidth, image.naturalHeight);
+        const resolutionWarning =
+          actualShort < requiredShort || actualLong < requiredLong
+            ? `Low-resolution artwork: ${image.naturalWidth} × ${image.naturalHeight}px. For this size, aim for at least ${requiredShort} × ${requiredLong}px (150 DPI).`
+            : "";
+        artworkKey = crypto.randomUUID();
+        await artworkStore(artworkKey, url);
+        if (seq !== uploadSequence.current) return;
+        setPreviewUrl(url);
+        setSign({
+          artworkKey,
+          filename: file.name,
+          proofStatus: "Artwork Uploaded",
+          requestedChanges: "",
+          pixelWidth: image.naturalWidth,
+          pixelHeight: image.naturalHeight,
+          resolutionWarning,
+          printReadiness: resolutionWarning
+            ? "Review required"
+            : "Pending preflight",
+        });
+        return;
+      }
+      if (seq !== uploadSequence.current) return;
+      setPreviewUrl(url);
+      setSign({
+        artworkKey,
+        filename: file.name,
+        proofStatus: "Artwork Uploaded",
+        requestedChanges: "",
+        pixelWidth: 0,
+        pixelHeight: 0,
+        resolutionWarning:
+          "PDF artwork requires business-side preflight before production.",
+        printReadiness: "Review required",
+      });
+    } catch {
+      setFileError(
+        "Could not read or save this image locally. Try another JPG or PNG, or enable browser storage.",
+      );
+    }
+  };
+  const quoteOnly =
+    state.sign.size === "24 × 36 in" ||
+    state.sign.productType === "Studio Magnetic Panel";
+  const imageMissing =
+    !!state.sign.filename &&
+    !state.sign.filename.toLowerCase().endsWith(".pdf") &&
+    !previewUrl;
+  const canRequestProof =
+    !imageMissing &&
+    ["Artwork Uploaded", "Revision Requested"].includes(state.sign.proofStatus);
+  const proofReady =
+    !imageMissing && state.sign.proofStatus === "Proof Prepared";
+  return (
+    <>
+      <PageHero
+        eyebrow="Artwork & proof"
+        title="Review the exact sign before approval."
+        copy="Upload artwork, preview the configured sign, request a proof, then approve that exact artwork and configuration before adding it to the cart."
+      />
+      <section className="py-14">
+        <div className="site-container grid gap-7 lg:grid-cols-[.8fr_1.2fr]">
+          <div className="rounded-[20px] border border-[#e1e5e8] bg-white p-7">
+            <h2 className="text-2xl font-semibold">Artwork upload</h2>
+            <div
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                choose(event.dataTransfer.files?.[0]);
+              }}
+              className="mt-6 rounded-2xl border-2 border-dashed border-[#b8bfc4] bg-[#fafafa] p-9 text-center"
+            >
+              <Upload className="mx-auto size-8 text-[#d96b36]" />
+              <p className="mt-4 font-semibold">Drag artwork here or browse</p>
+              <p className="mt-2 text-xs text-[#626a73]">
+                PNG, JPG, JPEG or PDF · Maximum 10 MB
+              </p>
+              <input
+                ref={inputRef}
+                type="file"
+                accept=".png,.jpg,.jpeg,.pdf"
+                className="hidden"
+                onChange={(event) => choose(event.target.files?.[0])}
+              />
+              <Button
+                variant="outline"
+                className="mt-5 rounded-full"
+                onClick={() => inputRef.current?.click()}
+              >
+                Browse files
+              </Button>
+            </div>
+            {fileError && (
+              <p className="mt-3 text-sm text-[#b83f43]">{fileError}</p>
+            )}
+            {state.sign.filename && (
+              <div className="mt-4 flex items-center gap-3 rounded-xl bg-[#f1f3f4] p-4">
+                <FileImage className="text-[#d96b36]" />
+                <div className="min-w-0 flex-1">
+                  <strong className="block truncate text-sm">
+                    {state.sign.filename}
+                  </strong>
+                  <span className="text-xs text-[#626a73]">
+                    {state.sign.pixelWidth
+                      ? `${state.sign.pixelWidth} × ${state.sign.pixelHeight}px · `
+                      : ""}
+                    Saved in this browser for proof review.
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    uploadSequence.current++;
+                    setPreviewUrl("");
+                    setSign({
+                      artworkKey: "",
+                      filename: "",
+                      proofStatus: "Awaiting Artwork",
+                      requestedChanges: "",
+                      pixelWidth: 0,
+                      pixelHeight: 0,
+                      resolutionWarning: "",
+                      printReadiness: "Not checked",
+                    });
+                  }}
+                >
+                  Remove
+                </Button>
+              </div>
+            )}
+            {state.sign.resolutionWarning && (
+              <div className="mt-4 flex gap-3 rounded-xl border border-[#ead8ab] bg-[#fff8e9] p-4 text-sm leading-6 text-[#805519]">
+                <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+                <span>
+                  <strong>Print-quality check needed.</strong>{" "}
+                  {state.sign.resolutionWarning}
+                </span>
+              </div>
+            )}
+            <label className="mt-5 flex items-center gap-3">
+              <Checkbox
+                checked={state.sign.assist}
+                onCheckedChange={(value) => setSign({ assist: !!value })}
+              />
+              <span className="text-sm">I need help preparing my artwork.</span>
+            </label>
+            {state.sign.assist && (
+              <Textarea
+                className="mt-3"
+                value={state.sign.assistNotes}
+                onChange={(event) =>
+                  setSign({ assistNotes: event.target.value })
+                }
+                placeholder="Describe the design support you need…"
+              />
+            )}
+          </div>
+          <div className="rounded-[20px] border border-[#e1e5e8] bg-[#f0f1ef] p-7">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[.12em] text-[#626a73]">
+                  Proof version {Math.max(1, state.sign.proofVersion)}
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold">
+                  Magnetic sign proof
+                </h2>
+              </div>
+              <StatusBadge status={state.sign.proofStatus} />
+            </div>
+            <p className="mt-4 text-sm leading-6 text-[#626a73]">
+              {state.sign.proofStatus === "Awaiting Artwork"
+                ? "Upload artwork to begin."
+                : state.sign.proofStatus === "Artwork Uploaded"
+                  ? "Artwork is placed at the selected dimensions and ready for a proof request."
+                  : state.sign.proofStatus === "Proof Prepared"
+                    ? "The customer proof is ready for approval or revision."
+                    : state.sign.proofStatus === "Revision Requested"
+                      ? "Submit the requested revision for a new proof."
+                      : "Customer proof approved for this exact artwork and configuration."}
+            </p>
+            <div className="my-7 grid min-h-[320px] place-items-center rounded-xl bg-[#232a30] p-8">
+              <SignPreview sign={state.sign} previewUrl={previewUrl} />
+            </div>
+            {imageMissing && (
+              <p className="mb-4 text-sm text-amber-800">
+                Loading saved image. If it does not appear, replace the artwork
+                before approving the proof.
+              </p>
+            )}
+            {state.sign.requestedChanges && (
+              <div className="mb-5 rounded-xl bg-[#fff8e9] p-4 text-sm text-[#805519]">
+                <strong>Requested changes</strong>
+                <p className="mt-1">{state.sign.requestedChanges}</p>
+              </div>
+            )}
+            <div className="mb-5 grid gap-3 rounded-xl bg-white/70 p-4 text-sm sm:grid-cols-2">
+              <div>
+                <span className="text-xs text-[#626a73]">
+                  Customer proof approval
+                </span>
+                <strong className="mt-1 block">
+                  {state.sign.customerApproval}
+                </strong>
+              </div>
+              <div>
+                <span className="text-xs text-[#626a73]">
+                  Business artwork review
+                </span>
+                <strong className="mt-1 block">
+                  {state.sign.businessReviewStatus}
+                </strong>
+              </div>
+              <div className="sm:col-span-2">
+                <span className="text-xs text-[#626a73]">Print readiness</span>
+                <strong className="mt-1 block">
+                  {state.sign.printReadiness}
+                </strong>
+                <p className="mt-1 text-xs text-[#626a73]">
+                  Business preflight remains separate from customer approval and
+                  must be completed before production.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                disabled={!canRequestProof}
+                className="rounded-full bg-[#171c22]"
+                onClick={() =>
+                  setSign({
+                    proofStatus: "Proof Prepared",
+                    proofVersion: state.sign.proofVersion + 1,
+                  })
+                }
+              >
+                {state.sign.proofStatus === "Revision Requested"
+                  ? "Request revised proof"
+                  : "Request proof"}
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    disabled={!proofReady}
+                    className="rounded-full bg-[#24764c]"
+                  >
+                    Approve proof
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Approve this exact proof?</DialogTitle>
+                    <DialogDescription>
+                      Your approval is tied to this artwork file, size, finish,
+                      color, alignment and quantity. Any change will reset it.
+                      Business artwork review remains separate.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button onClick={approveSignProof}>
+                        Confirm customer approval
+                      </Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    disabled={!proofReady}
+                    variant="outline"
+                    className="rounded-full"
+                  >
+                    Request changes
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Request a proof revision</DialogTitle>
+                    <DialogDescription>
+                      Describe the changes needed for the next proof version.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Textarea
+                    value={changes}
+                    onChange={(event) => setChanges(event.target.value)}
+                    placeholder="Move the logo up and increase the phone number size…"
+                  />
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button
+                        disabled={!changes.trim()}
+                        onClick={() =>
+                          setSign({
+                            proofStatus: "Revision Requested",
+                            requestedChanges: changes,
+                            customerApproval: "Not approved",
+                            approvedFingerprint: "",
+                          })
+                        }
+                      >
+                        Submit revision
+                      </Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Button
+                variant="outline"
+                className="rounded-full"
+                onClick={() => inputRef.current?.click()}
+              >
+                Replace artwork
+              </Button>
+              {quoteOnly ? (
+                <Button
+                  className="rounded-full bg-[#d96b36]"
+                  disabled={
+                    imageMissing || state.sign.proofStatus !== "Approved"
+                  }
+                  asChild={state.sign.proofStatus === "Approved"}
+                >
+                  {state.sign.proofStatus === "Approved" ? (
+                    <Link href="/quote/request">Request quote</Link>
+                  ) : (
+                    <span>Approve proof to continue</span>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  className="rounded-full bg-[#d96b36]"
+                  disabled={
+                    imageMissing || state.sign.proofStatus !== "Approved"
+                  }
+                  onClick={addSignToCart}
+                >
+                  {state.sign.proofStatus === "Approved"
+                    ? "Add approved sign to cart"
+                    : "Approve proof to continue"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function SignPreview({
+  sign,
+  previewUrl,
+}: {
+  sign: ReturnType<typeof useDemo>["state"]["sign"];
+  previewUrl: string;
+}) {
+  const ratio = sign.size === "18 × 24 in" ? "4 / 3" : "3 / 2";
+  return (
+    <div
+      className="relative grid w-full max-w-[480px] overflow-hidden rounded-md border-[5px] border-white/80 p-4 shadow-2xl"
+      style={{ background: sign.color, aspectRatio: ratio }}
+    >
+      {previewUrl ? (
+        <img
+          src={previewUrl}
+          alt={`Uploaded artwork preview: ${sign.filename}`}
+          className="absolute inset-3 h-[calc(100%-24px)] w-[calc(100%-24px)] object-contain"
+          style={{
+            objectPosition:
+              sign.alignment === "Left aligned"
+                ? "left"
+                : sign.alignment === "Right aligned"
+                  ? "right"
+                  : "center",
+          }}
+        />
+      ) : (
+        <div className="grid place-content-center text-center text-slate-500">
+          <FileImage className="mx-auto mb-3 size-9" />
+          <strong>
+            {sign.filename.toLowerCase().endsWith(".pdf")
+              ? "PDF artwork reference"
+              : sign.filename
+                ? "Image preview unavailable"
+                : "Your artwork here"}
+          </strong>
+          <span className="mt-2 text-xs">
+            {sign.filename || "Upload a JPG or PNG to preview your sign"}
+          </span>
+        </div>
+      )}
+      {sign.material === "Gloss magnetic" && (
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent_30%,#ffffff55_48%,transparent_65%)]" />
+      )}
+      <span className="absolute bottom-1 right-1 rounded bg-white/95 px-2 py-1 text-[9px] font-bold text-slate-700">
+        {sign.size} · {sign.material}
+      </span>
+    </div>
+  );
 }
