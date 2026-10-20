@@ -1184,7 +1184,7 @@ export function ArtworkPage() {
   const {
     state,
     setSign,
-    approveSignProof,
+    submitSignForAdminReview,
     addSignToCart,
     artworkPreview: previewUrl,
     setArtworkPreview: setPreviewUrl,
@@ -1410,10 +1410,12 @@ export function ArtworkPage() {
                 : state.sign.proofStatus === "Artwork Uploaded"
                   ? "Artwork is placed at the selected dimensions and ready for a proof request."
                   : state.sign.proofStatus === "Proof Prepared"
-                    ? "The customer proof is ready for approval or revision."
+                    ? "The proof is ready to submit for administrator approval or revision."
                     : state.sign.proofStatus === "Revision Requested"
                       ? "Submit the requested revision for a new proof."
-                      : "Customer proof approved for this exact artwork and configuration."}
+                      : state.sign.proofStatus === "Pending Admin Approval"
+                        ? "This exact artwork and configuration are waiting for administrator approval."
+                        : "An administrator approved this exact artwork and configuration."}
             </p>
             <div className="my-7 grid min-h-[320px] place-items-center rounded-xl bg-[#232a30] p-8">
               <SignPreview sign={state.sign} previewUrl={previewUrl} />
@@ -1433,10 +1435,12 @@ export function ArtworkPage() {
             <div className="mb-5 grid gap-3 rounded-xl bg-white/70 p-4 text-sm sm:grid-cols-2">
               <div>
                 <span className="text-xs text-[#626a73]">
-                  Customer proof approval
+                  Customer submission
                 </span>
                 <strong className="mt-1 block">
-                  {state.sign.customerApproval}
+                  {state.sign.reviewArtworkId
+                    ? `Submitted as ${state.sign.reviewArtworkId}`
+                    : "Not submitted"}
                 </strong>
               </div>
               <div>
@@ -1479,22 +1483,24 @@ export function ArtworkPage() {
                     disabled={!proofReady}
                     className="rounded-full bg-[#24764c]"
                   >
-                    Approve proof
+                    Submit for admin approval
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Approve this exact proof?</DialogTitle>
+                    <DialogTitle>
+                      Submit this artwork for admin approval?
+                    </DialogTitle>
                     <DialogDescription>
-                      Your approval is tied to this artwork file, size, finish,
-                      color, alignment and quantity. Any change will reset it.
-                      Business artwork review remains separate.
+                      The administrator will review this exact artwork file,
+                      size, finish, color, alignment and quantity. Customers
+                      cannot approve production artwork.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
                     <DialogClose asChild>
-                      <Button onClick={approveSignProof}>
-                        Confirm customer approval
+                      <Button onClick={submitSignForAdminReview}>
+                        Submit to administrator
                       </Button>
                     </DialogClose>
                   </DialogFooter>
@@ -1530,7 +1536,7 @@ export function ArtworkPage() {
                           setSign({
                             proofStatus: "Revision Requested",
                             requestedChanges: changes,
-                            customerApproval: "Not approved",
+                            customerApproval: "Not required",
                             approvedFingerprint: "",
                           })
                         }
@@ -1552,14 +1558,21 @@ export function ArtworkPage() {
                 <Button
                   className="rounded-full bg-[#d96b36]"
                   disabled={
-                    imageMissing || state.sign.proofStatus !== "Approved"
+                    imageMissing ||
+                    !["Pending Admin Approval", "Approved"].includes(
+                      state.sign.proofStatus,
+                    )
                   }
-                  asChild={state.sign.proofStatus === "Approved"}
+                  asChild={["Pending Admin Approval", "Approved"].includes(
+                    state.sign.proofStatus,
+                  )}
                 >
-                  {state.sign.proofStatus === "Approved" ? (
+                  {["Pending Admin Approval", "Approved"].includes(
+                    state.sign.proofStatus,
+                  ) ? (
                     <Link href="/quote/request">Request quote</Link>
                   ) : (
-                    <span>Approve proof to continue</span>
+                    <span>Submit artwork for admin review</span>
                   )}
                 </Button>
               ) : (
@@ -1572,7 +1585,7 @@ export function ArtworkPage() {
                 >
                   {state.sign.proofStatus === "Approved"
                     ? "Add approved sign to cart"
-                    : "Approve proof to continue"}
+                    : "Waiting for admin approval"}
                 </Button>
               )}
             </div>

@@ -71,6 +71,7 @@ export type SignConfiguration = {
   pixelHeight: number;
   resolutionWarning: string;
   proofVersion: number;
+  reviewArtworkId: string;
 };
 export function signConfigurationFingerprint(
   sign: Pick<
@@ -1396,7 +1397,7 @@ export type DemoState = {
 
 export function initialState(): DemoState {
   return {
-    version: 10,
+    version: 11,
     products: structuredClone(seedProducts),
     fitments: structuredClone(seedFitments),
     orders: structuredClone(seedOrders),
@@ -1443,13 +1444,14 @@ export function initialState(): DemoState {
       assistNotes: "",
       requestedChanges: "",
       approvedFingerprint: "",
-      customerApproval: "Not approved",
+      customerApproval: "Not required",
       businessReviewStatus: "Not submitted",
       printReadiness: "Not checked",
       pixelWidth: 0,
       pixelHeight: 0,
       resolutionWarning: "",
       proofVersion: 0,
+      reviewArtworkId: "",
     },
     editingSignCartItemId: "",
     discount: "",

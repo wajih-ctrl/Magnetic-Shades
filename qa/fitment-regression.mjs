@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { initialState, vehicleCatalog } from "../lib/demo-data.ts";
+import {
+  initialState,
+  signConfigurationFingerprint,
+  vehicleCatalog,
+} from "../lib/demo-data.ts";
 import { findFitment, cartIssue } from "../lib/fitment.ts";
 import { vehicleProfile } from "../lib/vehicle-geometry.ts";
 const state = initialState();
@@ -111,6 +115,32 @@ assert.notEqual(
   vehicleProfile({ model: "F-150", body: "SuperCab" }).roofRear,
   vehicleProfile({ model: "F-150", body: "Crew Cab" }).roofRear,
 );
+const signState = initialState();
+const signConfig = {
+  ...signState.sign,
+  artworkKey: "artwork-test",
+  filename: "fleet-logo.png",
+  proofStatus: "Approved",
+  businessReviewStatus: "Pending artwork review",
+  printReadiness: "Pending admin review",
+};
+signConfig.approvedFingerprint = signConfigurationFingerprint(signConfig);
+const signItem = {
+  id: "sign-test",
+  productId: "p3",
+  sku: "MS-FM-1824",
+  name: "Fleetmark Door Pair — fleet-logo.png",
+  qty: 1,
+  price: 126,
+  meta: "",
+  image: "",
+  signConfiguration: signConfig,
+};
+signState.cart = [signItem];
+assert.match(cartIssue(signState, signItem), /needs approval/i);
+signConfig.businessReviewStatus = "Approved";
+signConfig.printReadiness = "Ready";
+assert.equal(cartIssue(signState, signItem), "");
 const quoteState = initialState();
 const acceptedQuote = quoteState.quotes.find((quote) => quote.id === "QT-2074");
 assert.ok(acceptedQuote);
@@ -132,5 +162,5 @@ quoteState.artwork.find((artwork) => artwork.id === "ART-638").status =
   "Revision Requested";
 assert.match(cartIssue(quoteState, quoteCartItem), /approved artwork/i);
 console.log(
-  "PASS: catalog fitments, checkout gates, approved quote checkout, and vehicle geometry regression checks.",
+  "PASS: catalog fitments, admin-only artwork approval, approved quote checkout, and vehicle geometry regression checks.",
 );

@@ -125,9 +125,11 @@ export function CartPage() {
                               </dd>
                             </div>
                             <div>
-                              <dt className="text-[#626a73]">Approved proof</dt>
+                              <dt className="text-[#626a73]">
+                                Artwork approval
+                              </dt>
                               <dd className="font-semibold">
-                                Customer proof v
+                                Admin-approved proof v
                                 {item.signConfiguration.proofVersion}
                               </dd>
                             </div>

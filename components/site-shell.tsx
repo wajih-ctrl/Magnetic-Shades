@@ -116,10 +116,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
               className="hidden rounded-full sm:inline-flex"
               asChild
             >
-              <Link
-                href="/account/quotes"
-                aria-label="Customer account and quotes"
-              >
+              <Link href="/admin" aria-label="Admin Portal">
                 <UserRound className="size-4" />
               </Link>
             </Button>

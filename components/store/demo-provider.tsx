@@ -19,7 +19,7 @@ import {
 import { cartIssue } from "@/lib/fitment";
 import { artworkStore } from "@/lib/artwork-storage";
 
-const STORAGE_KEY = "magnetic-shades-demo-v10";
+const STORAGE_KEY = "magnetic-shades-demo-v11";
 
 type DemoContextValue = {
   state: DemoState;
@@ -34,7 +34,7 @@ type DemoContextValue = {
   setVehicle: (patch: Partial<DemoState["vehicle"]>) => void;
   setShade: (patch: Partial<DemoState["shade"]>) => void;
   setSign: (patch: Partial<DemoState["sign"]>) => void;
-  approveSignProof: () => void;
+  submitSignForAdminReview: () => string;
   addToCart: (product: Product, meta?: string, price?: number) => void;
   addShadeToCart: () => void;
   updateCartQty: (id: string, qty: number) => void;
@@ -103,7 +103,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as DemoState;
-        if (parsed.version === 10) restored = parsed;
+        if (parsed.version === 11) restored = parsed;
       }
     } catch {
       /* fall back to seeded demo data */
@@ -168,8 +168,9 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         const next = { ...s.sign, ...patch };
         if (approvalChanged) {
           next.approvedFingerprint = "";
-          next.customerApproval = "Not approved";
+          next.customerApproval = "Not required";
           next.businessReviewStatus = "Not submitted";
+          next.reviewArtworkId = "";
           next.printReadiness = next.resolutionWarning
             ? "Review required"
             : "Not checked";
@@ -184,23 +185,42 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const approveSignProof = useCallback(
-    () =>
-      setState((s) => ({
+  const submitSignForAdminReview = useCallback(() => {
+    const id = `ART-${700 + Math.floor(Math.random() * 200)}`;
+    setState((s) => {
+      if (!s.sign.filename || !s.sign.artworkKey) return s;
+      const artworkId = s.sign.reviewArtworkId || id;
+      const record = {
+        id: artworkId,
+        customer: "Customer upload",
+        product: s.sign.productType,
+        filename: s.sign.filename,
+        proof: Math.max(1, s.sign.proofVersion),
+        status: "Awaiting Review",
+        readiness: "Blocked",
+        artworkKey: s.sign.artworkKey,
+        config: `${s.sign.size} · ${s.sign.material} · ${s.sign.alignment}`,
+      };
+      return {
         ...s,
         sign: {
           ...s.sign,
-          proofStatus: "Approved",
-          customerApproval: "Approved",
-          approvedFingerprint: signConfigurationFingerprint(s.sign),
+          reviewArtworkId: artworkId,
+          proofStatus: "Pending Admin Approval",
+          customerApproval: "Not required",
           businessReviewStatus: "Pending artwork review",
-          printReadiness: s.sign.resolutionWarning
-            ? "Review required"
-            : "Pending preflight",
+          printReadiness: "Pending admin review",
         },
-      })),
-    [],
-  );
+        artwork: s.sign.reviewArtworkId
+          ? s.artwork.map((artwork) =>
+              artwork.id === artworkId ? { ...artwork, ...record } : artwork,
+            )
+          : [record, ...s.artwork],
+        events: [...s.events, "artwork_submit_for_admin_review"],
+      };
+    });
+    return id;
+  }, []);
 
   const currentFitment = useMemo(() => {
     const exact = state.fitments.find(
@@ -342,7 +362,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         p.inventory < s.sign.qty ||
         s.sign.productType === "Studio Magnetic Panel" ||
         s.sign.proofStatus !== "Approved" ||
-        s.sign.customerApproval !== "Approved" ||
+        s.sign.businessReviewStatus !== "Approved" ||
+        s.sign.printReadiness !== "Ready" ||
         !approvalMatches ||
         s.sign.size === "24 × 36 in"
       )
@@ -355,7 +376,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         sku: p.sku,
         qty: s.sign.qty,
         price: unit,
-        meta: `${s.sign.size} · ${s.sign.material} · ${s.sign.alignment} · Customer proof v${s.sign.proofVersion} approved · Business preflight pending`,
+        meta: `${s.sign.size} · ${s.sign.material} · ${s.sign.alignment} · Admin-approved proof v${s.sign.proofVersion} · Print ready`,
         image: artworkPreview || p.image,
         signConfiguration: { ...s.sign },
       };
@@ -548,7 +569,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       requestedTiming: string;
     }) => {
       const id = `QT-${2100 + Math.floor(Math.random() * 500)}`;
-      const artworkId = `ART-${700 + Math.floor(Math.random() * 200)}`;
+      const generatedArtworkId = `ART-${700 + Math.floor(Math.random() * 200)}`;
       setState((s) => ({
         ...s,
         quotes: [
@@ -568,7 +589,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
             config: `${s.sign.size} · ${s.sign.material} · ${s.sign.alignment}`,
             size: s.sign.size,
             material: s.sign.material,
-            artworkId,
+            artworkId: s.sign.reviewArtworkId || generatedArtworkId,
             artworkKey: s.sign.artworkKey,
             filename: s.sign.filename,
             date: "Oct 20, 2026",
@@ -577,21 +598,31 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
           },
           ...s.quotes,
         ],
-        artwork: [
-          {
-            id: artworkId,
-            customer: details.customer,
-            product: s.sign.productType,
-            filename: s.sign.filename || "No artwork supplied",
-            proof: Math.max(1, s.sign.proofVersion),
-            status: "Awaiting Review",
-            readiness: "Blocked",
-            artworkKey: s.sign.artworkKey,
-            quoteId: id,
-            config: `${s.sign.size} · ${s.sign.material} · ${s.sign.alignment}`,
-          },
-          ...s.artwork,
-        ],
+        artwork: s.sign.reviewArtworkId
+          ? s.artwork.map((artwork) =>
+              artwork.id === s.sign.reviewArtworkId
+                ? {
+                    ...artwork,
+                    customer: details.customer,
+                    quoteId: id,
+                  }
+                : artwork,
+            )
+          : [
+              {
+                id: generatedArtworkId,
+                customer: details.customer,
+                product: s.sign.productType,
+                filename: s.sign.filename || "No artwork supplied",
+                proof: Math.max(1, s.sign.proofVersion),
+                status: "Awaiting Review",
+                readiness: "Blocked",
+                artworkKey: s.sign.artworkKey,
+                quoteId: id,
+                config: `${s.sign.size} · ${s.sign.material} · ${s.sign.alignment}`,
+              },
+              ...s.artwork,
+            ],
         events: [...s.events, "quote_submit"],
       }));
       return id;
@@ -751,19 +782,40 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   );
   const updateArtwork = useCallback(
     (id: string, status: string) =>
-      setState((s) => ({
-        ...s,
-        artwork: s.artwork.map((a) =>
-          a.id === id
+      setState((s) => {
+        const updatesCurrentSign = s.sign.reviewArtworkId === id;
+        return {
+          ...s,
+          sign: updatesCurrentSign
             ? {
-                ...a,
-                status,
-                proof: status === "Proof Prepared" ? a.proof + 1 : a.proof,
-                readiness: status === "Approved" ? "Ready" : "Blocked",
+                ...s.sign,
+                proofStatus:
+                  status === "Approved"
+                    ? "Approved"
+                    : status === "Revision Requested"
+                      ? "Revision Requested"
+                      : "Pending Admin Approval",
+                businessReviewStatus:
+                  status === "Approved" ? "Approved" : status,
+                printReadiness: status === "Approved" ? "Ready" : "Blocked",
+                approvedFingerprint:
+                  status === "Approved"
+                    ? signConfigurationFingerprint(s.sign)
+                    : "",
               }
-            : a,
-        ),
-      })),
+            : s.sign,
+          artwork: s.artwork.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  status,
+                  proof: status === "Proof Prepared" ? a.proof + 1 : a.proof,
+                  readiness: status === "Approved" ? "Ready" : "Blocked",
+                }
+              : a,
+          ),
+        };
+      }),
     [],
   );
   const setDemoRole = useCallback(
@@ -793,7 +845,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setVehicle,
     setShade,
     setSign,
-    approveSignProof,
+    submitSignForAdminReview,
     addToCart,
     addShadeToCart,
     addSignToCart,

@@ -79,7 +79,8 @@ export function cartIssue(
     if (
       !config ||
       config.proofStatus !== "Approved" ||
-      config.customerApproval !== "Approved" ||
+      config.businessReviewStatus !== "Approved" ||
+      config.printReadiness !== "Ready" ||
       config.approvedFingerprint !== signConfigurationFingerprint(config)
     )
       return "This custom sign needs approval for its exact artwork and configuration.";
