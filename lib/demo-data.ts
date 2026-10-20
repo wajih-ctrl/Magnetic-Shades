@@ -924,7 +924,7 @@ export function vehiclePreviewFor(vehicle: {
   );
 }
 
-export const seedFitments: Fitment[] = [
+const featuredFitments: Fitment[] = [
   {
     id: "FIT-101",
     year: "2023",
@@ -1108,6 +1108,88 @@ export const seedFitments: Fitment[] = [
   },
 ];
 
+const featuredFitmentKeys = new Set(
+  featuredFitments.map(
+    (fitment) =>
+      `${fitment.year}|${fitment.make}|${fitment.model}|${fitment.body}|${fitment.trim}|${fitment.sku}`,
+  ),
+);
+
+const demoStatusCycle: FitmentStatus[] = [
+  "Verified",
+  "Needs Confirmation",
+  "Verified",
+  "Not Compatible",
+];
+
+const catalogFitments: Fitment[] = vehicleCatalog.flatMap(
+  (vehicle, vehicleIndex) =>
+    vehicle.trims.flatMap((trim, trimIndex) =>
+      (["MS-AE-240", "MS-CP-118"] as const).flatMap((sku, skuIndex) => {
+        const key = `${vehicle.year}|${vehicle.make}|${vehicle.model}|${vehicle.body}|${trim}|${sku}`;
+        if (featuredFitmentKeys.has(key)) return [];
+        const status =
+          demoStatusCycle[
+            (vehicleIndex + trimIndex + skuIndex) % demoStatusCycle.length
+          ];
+        const zones =
+          status === "Not Compatible"
+            ? []
+            : sku === "MS-CP-118"
+              ? ["Driver front", "Passenger front"]
+              : [
+                  "Driver front",
+                  "Driver rear",
+                  "Passenger front",
+                  "Passenger rear",
+                ];
+        return [
+          {
+            id: `FIT-CAT-${vehicleIndex + 1}-${trimIndex + 1}-${skuIndex + 1}`,
+            year: vehicle.year,
+            make: vehicle.make,
+            model: vehicle.model,
+            trim,
+            body: vehicle.body,
+            market: "Illustrative Demo",
+            sku,
+            zones,
+            status,
+            tested: "Oct 20, 2026",
+            revision: 1,
+            geometry: `GEO-DEMO-${vehicleIndex + 1}-${trimIndex + 1}`,
+            notes:
+              status === "Verified"
+                ? "Illustrative verified scenario for configurator testing. Replace with validated production fitment data before launch."
+                : status === "Needs Confirmation"
+                  ? "This vehicle and shade combination requires a fitment review before purchase."
+                  : "This illustrative record is marked not compatible with the selected shade product.",
+            exclusions:
+              status === "Verified"
+                ? "Direct glass mounting; use only compatible exterior metal contact points"
+                : status === "Needs Confirmation"
+                  ? "Purchase remains unavailable until fitment is confirmed"
+                  : "All coverage zones",
+            history: [
+              {
+                revision: 1,
+                date: "Oct 20, 2026",
+                note: `Created ${status.toLowerCase()} catalog demonstration scenario.`,
+                status,
+                zones,
+              },
+            ],
+          },
+        ];
+      }),
+    ),
+);
+
+export const seedFitments: Fitment[] = [
+  ...featuredFitments,
+  ...catalogFitments,
+];
+
 export const seedOrders: DemoOrder[] = [
   {
     id: "MS-10428",
@@ -1287,7 +1369,7 @@ export type DemoState = {
 
 export function initialState(): DemoState {
   return {
-    version: 8,
+    version: 9,
     products: structuredClone(seedProducts),
     fitments: structuredClone(seedFitments),
     orders: structuredClone(seedOrders),

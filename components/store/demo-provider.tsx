@@ -19,7 +19,7 @@ import {
 import { cartIssue } from "@/lib/fitment";
 import { artworkStore } from "@/lib/artwork-storage";
 
-const STORAGE_KEY = "magnetic-shades-demo-v8";
+const STORAGE_KEY = "magnetic-shades-demo-v9";
 
 type DemoContextValue = {
   state: DemoState;
@@ -58,6 +58,7 @@ type DemoContextValue = {
     email: string,
     phone: string,
     notes: string,
+    vehicle?: DemoState["vehicle"],
   ) => string;
   submitQuote: (customer: string) => string;
   submitSupport: (name: string, category: string) => string;
@@ -94,7 +95,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as DemoState;
-        if (parsed.version === 8) restored = parsed;
+        if (parsed.version === 9) restored = parsed;
       }
     } catch {
       /* fall back to seeded demo data */
@@ -499,7 +500,13 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     [],
   );
   const submitFitmentRequest = useCallback(
-    (customer: string, email: string, phone: string, notes: string) => {
+    (
+      customer: string,
+      email: string,
+      phone: string,
+      notes: string,
+      vehicle?: DemoState["vehicle"],
+    ) => {
       const id = `FR-${300 + Math.floor(Math.random() * 600)}`;
       setState((s) => ({
         ...s,
@@ -510,7 +517,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
             email,
             phone,
             notes,
-            vehicle: `${s.vehicle.year} ${s.vehicle.make} ${s.vehicle.model} · ${s.vehicle.body} · ${s.vehicle.trim}`,
+            vehicle: `${(vehicle ?? s.vehicle).year} ${(vehicle ?? s.vehicle).make} ${(vehicle ?? s.vehicle).model} · ${(vehicle ?? s.vehicle).body} · ${(vehicle ?? s.vehicle).trim}`,
             sku: s.shade.productSku,
             coverage: s.shade.zones.join(", ") || "No coverage selected",
             appearance: `${s.shade.mesh} · ${s.shade.edge} edge`,

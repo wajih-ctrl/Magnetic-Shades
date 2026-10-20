@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -213,7 +213,7 @@ export function VehicleSelectionPage() {
                 Continue to configurator <ArrowRight />
               </Button>
               <Button variant="outline" className="rounded-full" asChild>
-                <Link href="/configure/fitment-request">
+                <Link href="/configure/fitment-request?mode=unlisted">
                   Can&apos;t find your car?
                 </Link>
               </Button>
@@ -795,35 +795,50 @@ function Summary({ label, value }: { label: string; value: string }) {
 
 export function FitmentRequestPage() {
   const { state, submitFitmentRequest } = useDemo();
+  const searchParams = useSearchParams();
+  const isUnlistedVehicle = searchParams.get("mode") === "unlisted";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [vehicle, setVehicle] = useState(() =>
+    isUnlistedVehicle
+      ? { year: "", make: "", model: "", body: "", trim: "" }
+      : { ...state.vehicle },
+  );
   const [ref, setRef] = useState("");
   const [error, setError] = useState("");
   const submit = () => {
     if (
       !name.trim() ||
       !email.includes("@") ||
-      !state.vehicle.year ||
-      !state.vehicle.make ||
-      !state.vehicle.model ||
-      !state.vehicle.body ||
-      !state.vehicle.trim
+      !vehicle.year.trim() ||
+      !vehicle.make.trim() ||
+      !vehicle.model.trim() ||
+      !vehicle.body.trim() ||
+      !vehicle.trim.trim()
     ) {
       setError(
         "Complete your name, email and vehicle details before requesting review.",
       );
       return;
     }
-    setRef(submitFitmentRequest(name, email, phone, notes));
+    setRef(submitFitmentRequest(name, email, phone, notes, vehicle));
   };
   return (
     <>
       <PageHero
         eyebrow="Fitment assistance"
-        title="Request a fitment confirmation."
-        copy="We will review the exact vehicle, shade product, coverage and finish saved below. This does not create a purchase or payment."
+        title={
+          isUnlistedVehicle
+            ? "Tell us about your vehicle."
+            : "Request a fitment confirmation."
+        }
+        copy={
+          isUnlistedVehicle
+            ? "Enter the vehicle that was not available in the configurator. We will save the details for a fitment review."
+            : "We will review the exact vehicle, shade product, coverage and finish saved below. This does not create a purchase or payment."
+        }
       />
       <section className="py-14">
         <div className="site-container max-w-4xl">
@@ -846,8 +861,16 @@ export function FitmentRequestPage() {
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button className="rounded-full" asChild>
-                  <Link href="/configure/vehicle/preview">
-                    Return to configuration
+                  <Link
+                    href={
+                      isUnlistedVehicle
+                        ? "/configure/vehicle"
+                        : "/configure/vehicle/preview"
+                    }
+                  >
+                    {isUnlistedVehicle
+                      ? "Return to vehicle search"
+                      : "Return to configuration"}
                   </Link>
                 </Button>
                 <Button variant="outline" className="rounded-full" asChild>
@@ -863,9 +886,9 @@ export function FitmentRequestPage() {
                     Your fitment request
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-[#626a73]">
-                    Check the details, add your contact information, then
-                    submit. Your selections stay saved if you go back to make
-                    changes.
+                    {isUnlistedVehicle
+                      ? "Enter your contact and vehicle details below. All five vehicle fields are required."
+                      : "Check the details, add your contact information, then submit. Your selections stay saved if you go back to make changes."}
                   </p>
                 </div>
                 <Button
@@ -873,8 +896,16 @@ export function FitmentRequestPage() {
                   className="shrink-0 rounded-full"
                   asChild
                 >
-                  <Link href="/configure/vehicle/preview">
-                    Edit configuration
+                  <Link
+                    href={
+                      isUnlistedVehicle
+                        ? "/configure/vehicle"
+                        : "/configure/vehicle/preview"
+                    }
+                  >
+                    {isUnlistedVehicle
+                      ? "Return to vehicle search"
+                      : "Edit configuration"}
                   </Link>
                 </Button>
               </div>
@@ -897,11 +928,46 @@ export function FitmentRequestPage() {
                   type="tel"
                 />
                 <div />
-                <Field label="Year" value={state.vehicle.year} disabled />
-                <Field label="Make" value={state.vehicle.make} disabled />
-                <Field label="Model" value={state.vehicle.model} disabled />
-                <Field label="Body style" value={state.vehicle.body} disabled />
-                <Field label="Trim" value={state.vehicle.trim} disabled />
+                <Field
+                  label="Year *"
+                  value={vehicle.year}
+                  onChange={(year) =>
+                    setVehicle((current) => ({ ...current, year }))
+                  }
+                  disabled={!isUnlistedVehicle}
+                />
+                <Field
+                  label="Make *"
+                  value={vehicle.make}
+                  onChange={(make) =>
+                    setVehicle((current) => ({ ...current, make }))
+                  }
+                  disabled={!isUnlistedVehicle}
+                />
+                <Field
+                  label="Model *"
+                  value={vehicle.model}
+                  onChange={(model) =>
+                    setVehicle((current) => ({ ...current, model }))
+                  }
+                  disabled={!isUnlistedVehicle}
+                />
+                <Field
+                  label="Body style *"
+                  value={vehicle.body}
+                  onChange={(body) =>
+                    setVehicle((current) => ({ ...current, body }))
+                  }
+                  disabled={!isUnlistedVehicle}
+                />
+                <Field
+                  label="Trim *"
+                  value={vehicle.trim}
+                  onChange={(trim) =>
+                    setVehicle((current) => ({ ...current, trim }))
+                  }
+                  disabled={!isUnlistedVehicle}
+                />
                 <Field
                   label="Product SKU"
                   value={state.shade.productSku}

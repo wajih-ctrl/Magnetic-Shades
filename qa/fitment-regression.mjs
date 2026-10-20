@@ -81,6 +81,28 @@ for (const f of initialState().fitments)
         v.trims.includes(f.trim),
     ),
   );
+const catalogState = initialState();
+for (const vehicle of vehicleCatalog)
+  for (const trim of vehicle.trims)
+    for (const sku of ["MS-AE-240", "MS-CP-118"])
+      assert.ok(
+        findFitment(
+          catalogState,
+          {
+            year: vehicle.year,
+            make: vehicle.make,
+            model: vehicle.model,
+            body: vehicle.body,
+            trim,
+          },
+          sku,
+        ),
+        `Missing ${sku} scenario for ${vehicle.year} ${vehicle.make} ${vehicle.model} ${vehicle.body} ${trim}`,
+      );
+assert.deepEqual(
+  new Set(catalogState.fitments.map((fitment) => fitment.status)),
+  new Set(["Verified", "Needs Confirmation", "Not Compatible"]),
+);
 assert.notDeepEqual(
   vehicleProfile({ model: "Corolla", body: "Sedan" }),
   vehicleProfile({ model: "Civic", body: "Sedan" }),
@@ -90,5 +112,5 @@ assert.notEqual(
   vehicleProfile({ model: "F-150", body: "Crew Cab" }).roofRear,
 );
 console.log(
-  "PASS: six seeded SKU/vehicle scenarios; catalog matching; invalid coverage, changed fitment, draft and aggregate stock checkout gates; distinct model and cab profiles.",
+  "PASS: full catalog/SKU fitment matrix with all three outcomes; invalid coverage, changed fitment, draft and aggregate stock checkout gates; distinct model and cab profiles.",
 );
