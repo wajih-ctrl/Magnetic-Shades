@@ -111,6 +111,26 @@ assert.notEqual(
   vehicleProfile({ model: "F-150", body: "SuperCab" }).roofRear,
   vehicleProfile({ model: "F-150", body: "Crew Cab" }).roofRear,
 );
+const quoteState = initialState();
+const acceptedQuote = quoteState.quotes.find((quote) => quote.id === "QT-2074");
+assert.ok(acceptedQuote);
+acceptedQuote.status = "Accepted";
+const quoteCartItem = {
+  id: "quote-QT-2074",
+  quoteId: "QT-2074",
+  productId: "p3",
+  sku: "MS-FM-1824",
+  name: "Fleetmark Door Pair — beacon-coffee.png",
+  qty: 2,
+  price: 132,
+  meta: "Approved quote",
+  image: "",
+};
+quoteState.cart = [quoteCartItem];
+assert.equal(cartIssue(quoteState, quoteCartItem), "");
+quoteState.artwork.find((artwork) => artwork.id === "ART-638").status =
+  "Revision Requested";
+assert.match(cartIssue(quoteState, quoteCartItem), /approved artwork/i);
 console.log(
-  "PASS: full catalog/SKU fitment matrix with all three outcomes; invalid coverage, changed fitment, draft and aggregate stock checkout gates; distinct model and cab profiles.",
+  "PASS: catalog fitments, checkout gates, approved quote checkout, and vehicle geometry regression checks.",
 );

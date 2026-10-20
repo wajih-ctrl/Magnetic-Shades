@@ -20,18 +20,37 @@ export function findFitment(
   );
 }
 export function cartIssue(
-  state: Pick<DemoState, "products" | "fitments" | "cart">,
+  state: Pick<
+    DemoState,
+    "products" | "fitments" | "cart" | "quotes" | "artwork"
+  >,
   item: CartItem,
 ): string {
   const product = state.products.find(
     (p) => p.id === item.productId && p.sku === item.sku,
   );
+  const isApprovedQuote = !!item.quoteId;
   if (
     !product ||
     product.status !== "Active" ||
-    !["buy", "configure", "customize"].includes(product.eligibility)
+    (!isApprovedQuote &&
+      !["buy", "configure", "customize"].includes(product.eligibility))
   )
     return "Product is unavailable.";
+  if (item.quoteId) {
+    const quote = state.quotes.find((entry) => entry.id === item.quoteId);
+    const artwork = state.artwork.find(
+      (entry) => entry.id === quote?.artworkId,
+    );
+    if (
+      !quote ||
+      quote.status !== "Accepted" ||
+      !quote.amount ||
+      artwork?.status !== "Approved" ||
+      artwork.readiness !== "Ready"
+    )
+      return "This quote needs customer acceptance and approved artwork before checkout.";
+  }
   const quantity = state.cart
     .filter((i) => i.productId === item.productId)
     .reduce((n, i) => n + i.qty, 0);
@@ -42,7 +61,7 @@ export function cartIssue(
   )
     return "Selected quantity exceeds available inventory.";
   if (item.price <= 0) return "A payable price is required.";
-  if (product.eligibility === "configure") {
+  if (!item.quoteId && product.eligibility === "configure") {
     const config = item.shadeConfiguration;
     if (!config)
       return "Reconfigure this saved shade item to confirm its fitment.";
@@ -55,7 +74,7 @@ export function cartIssue(
     )
       return "This shade configuration needs fitment review.";
   }
-  if (product.eligibility === "customize") {
+  if (!item.quoteId && product.eligibility === "customize") {
     const config = item.signConfiguration;
     if (
       !config ||

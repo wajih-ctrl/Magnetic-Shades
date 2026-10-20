@@ -19,7 +19,7 @@ import {
 import { cartIssue } from "@/lib/fitment";
 import { artworkStore } from "@/lib/artwork-storage";
 
-const STORAGE_KEY = "magnetic-shades-demo-v9";
+const STORAGE_KEY = "magnetic-shades-demo-v10";
 
 type DemoContextValue = {
   state: DemoState;
@@ -60,7 +60,15 @@ type DemoContextValue = {
     notes: string,
     vehicle?: DemoState["vehicle"],
   ) => string;
-  submitQuote: (customer: string) => string;
+  submitQuote: (details: {
+    customer: string;
+    email: string;
+    company: string;
+    notes: string;
+    requestedTiming: string;
+  }) => string;
+  respondToQuote: (id: string, response: "Accepted" | "Declined") => void;
+  addQuoteToCart: (id: string) => boolean;
   submitSupport: (name: string, category: string) => string;
   updateProduct: (id: string, patch: Partial<Product>) => void;
   addProduct: (product: Product) => void;
@@ -95,7 +103,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as DemoState;
-        if (parsed.version === 9) restored = parsed;
+        if (parsed.version === 10) restored = parsed;
       }
     } catch {
       /* fall back to seeded demo data */
@@ -531,27 +539,121 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     },
     [],
   );
-  const submitQuote = useCallback((customer: string) => {
-    const id = `QT-${2100 + Math.floor(Math.random() * 500)}`;
-    setState((s) => ({
-      ...s,
-      quotes: [
-        {
-          id,
-          customer,
-          product: "Studio Magnetic Panel",
-          qty: s.sign.qty,
-          config: `${s.sign.size} · ${s.sign.material}`,
-          date: "Oct 16, 2026",
-          status: "Submitted",
-          amount: null,
-        },
-        ...s.quotes,
-      ],
-      events: [...s.events, "quote_submit"],
-    }));
-    return id;
-  }, []);
+  const submitQuote = useCallback(
+    (details: {
+      customer: string;
+      email: string;
+      company: string;
+      notes: string;
+      requestedTiming: string;
+    }) => {
+      const id = `QT-${2100 + Math.floor(Math.random() * 500)}`;
+      const artworkId = `ART-${700 + Math.floor(Math.random() * 200)}`;
+      setState((s) => ({
+        ...s,
+        quotes: [
+          {
+            id,
+            customer: details.customer,
+            email: details.email,
+            company: details.company,
+            notes: details.notes,
+            requestedTiming: details.requestedTiming,
+            product: s.sign.productType,
+            productSku:
+              s.sign.productType === "Studio Magnetic Panel"
+                ? "MS-SP-2436"
+                : "MS-FM-1824",
+            qty: s.sign.qty,
+            config: `${s.sign.size} · ${s.sign.material} · ${s.sign.alignment}`,
+            size: s.sign.size,
+            material: s.sign.material,
+            artworkId,
+            artworkKey: s.sign.artworkKey,
+            filename: s.sign.filename,
+            date: "Oct 20, 2026",
+            status: "Submitted",
+            amount: null,
+          },
+          ...s.quotes,
+        ],
+        artwork: [
+          {
+            id: artworkId,
+            customer: details.customer,
+            product: s.sign.productType,
+            filename: s.sign.filename || "No artwork supplied",
+            proof: Math.max(1, s.sign.proofVersion),
+            status: "Awaiting Review",
+            readiness: "Blocked",
+            artworkKey: s.sign.artworkKey,
+            quoteId: id,
+            config: `${s.sign.size} · ${s.sign.material} · ${s.sign.alignment}`,
+          },
+          ...s.artwork,
+        ],
+        events: [...s.events, "quote_submit"],
+      }));
+      return id;
+    },
+    [],
+  );
+  const respondToQuote = useCallback(
+    (id: string, response: "Accepted" | "Declined") =>
+      setState((s) => ({
+        ...s,
+        quotes: s.quotes.map((quote) =>
+          quote.id === id && quote.status === "Quoted"
+            ? {
+                ...quote,
+                status: response,
+                customerResponseAt: "Oct 20, 2026",
+              }
+            : quote,
+        ),
+        events: [...s.events, `quote_${response.toLowerCase()}`],
+      })),
+    [],
+  );
+  const addQuoteToCart = useCallback(
+    (id: string) => {
+      const quote = state.quotes.find((item) => item.id === id);
+      const artwork = state.artwork.find(
+        (item) => item.id === quote?.artworkId,
+      );
+      const product = state.products.find(
+        (item) => item.sku === quote?.productSku,
+      );
+      if (
+        !quote ||
+        !product ||
+        quote.status !== "Accepted" ||
+        !quote.amount ||
+        artwork?.status !== "Approved" ||
+        artwork.readiness !== "Ready"
+      )
+        return false;
+      const item: CartItem = {
+        id: `quote-${quote.id}`,
+        quoteId: quote.id,
+        productId: product.id,
+        name: `${quote.product} — ${quote.filename || quote.id}`,
+        sku: product.sku,
+        qty: quote.qty,
+        price: quote.amount / quote.qty,
+        meta: `${quote.config} · Approved quote ${quote.id} · Artwork ${artwork.id} approved`,
+        image: product.image,
+      };
+      setState((s) => ({
+        ...s,
+        cart: [...s.cart.filter((entry) => entry.quoteId !== id), item],
+        events: [...s.events, "accepted_quote_add_to_cart"],
+      }));
+      setCartOpen(true);
+      return true;
+    },
+    [state],
+  );
   const submitSupport = useCallback((name: string, category: string) => {
     const id = `SUP-${700 + Math.floor(Math.random() * 200)}`;
     setState((s) => ({
@@ -704,6 +806,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     updateOrder,
     submitFitmentRequest,
     submitQuote,
+    respondToQuote,
+    addQuoteToCart,
     submitSupport,
     updateProduct,
     addProduct,

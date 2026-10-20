@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CheckCircle2, CircleX, PackageSearch, Trash2 } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleX,
+  Clock3,
+  FileCheck2,
+  PackageSearch,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,6 +34,7 @@ import {
 import { cartIssue } from "@/lib/fitment";
 import { useDemo } from "@/components/store/demo-provider";
 import { artworkStore } from "@/lib/artwork-storage";
+import { ArtworkAsset } from "@/components/artwork-asset";
 
 function money(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -745,7 +753,15 @@ export function QuoteRequestPage() {
       setError("Enter a name and valid demo email.");
       return;
     }
-    setRef(submitQuote(name));
+    setRef(
+      submitQuote({
+        customer: name,
+        email,
+        company,
+        notes,
+        requestedTiming: timing,
+      }),
+    );
   };
   return (
     <>
@@ -793,7 +809,7 @@ export function QuoteRequestPage() {
                 )}
               </dl>
               <Button className="mt-6 rounded-full" asChild>
-                <Link href="/admin/quotes-artwork">View record in admin</Link>
+                <Link href="/account/quotes">Track this quote</Link>
               </Button>
             </div>
           ) : (
@@ -861,6 +877,171 @@ export function QuoteRequestPage() {
               >
                 Submit quote request
               </Button>
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+export function MyQuotesPage() {
+  const { state, respondToQuote, addQuoteToCart } = useDemo();
+  const router = useRouter();
+  const [message, setMessage] = useState("");
+  const quoteArtwork = (artworkId?: string) =>
+    state.artwork.find((item) => item.id === artworkId);
+  return (
+    <>
+      <PageHero
+        eyebrow="Customer account"
+        title="My quotes"
+        copy="Track pricing, review the submitted configuration and artwork, respond to a quotation, and continue to payment when every approval is complete."
+      />
+      <section className="py-14">
+        <div className="site-container max-w-5xl">
+          {message && (
+            <div className="mb-5 rounded-xl border border-[#cde8d8] bg-[#edf8f1] p-4 text-sm text-[#24764c]">
+              {message}
+            </div>
+          )}
+          {!state.quotes.length ? (
+            <EmptyState
+              title="No quote requests yet"
+              copy="Configure a custom magnetic sign and submit a quote request to track it here."
+              label="Design a sign"
+              href="/custom-signs/design"
+            />
+          ) : (
+            <div className="grid gap-6">
+              {state.quotes.map((quote) => {
+                const artwork = quoteArtwork(quote.artworkId);
+                const canRespond = quote.status === "Quoted" && !!quote.amount;
+                const canCheckout =
+                  quote.status === "Accepted" &&
+                  !!quote.amount &&
+                  artwork?.status === "Approved" &&
+                  artwork.readiness === "Ready";
+                return (
+                  <article
+                    key={quote.id}
+                    className="rounded-[22px] border border-[#e1e5e8] bg-white p-6 sm:p-8"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[.12em] text-[#d96b36]">
+                          {quote.id} · {quote.date}
+                        </p>
+                        <h2 className="mt-2 text-2xl font-semibold">
+                          {quote.product}
+                        </h2>
+                        <p className="mt-1 text-sm text-[#626a73]">
+                          {quote.config} · Quantity {quote.qty}
+                        </p>
+                      </div>
+                      <StatusBadge status={quote.status} />
+                    </div>
+                    <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_.9fr]">
+                      <div>
+                        <dl className="grid gap-4 rounded-xl bg-[#f4f5f5] p-5 text-sm sm:grid-cols-2">
+                          <div>
+                            <dt className="text-[#626a73]">Quotation</dt>
+                            <dd className="mt-1 text-xl font-bold">
+                              {quote.amount
+                                ? money(quote.amount)
+                                : "Pending review"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-[#626a73]">Artwork status</dt>
+                            <dd className="mt-1 font-semibold">
+                              {artwork?.status || "Not linked"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-[#626a73]">Customer</dt>
+                            <dd className="mt-1 font-semibold">
+                              {quote.customer}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-[#626a73]">Email</dt>
+                            <dd className="mt-1 font-semibold">
+                              {quote.email || "Not recorded"}
+                            </dd>
+                          </div>
+                        </dl>
+                        {quote.notes && (
+                          <div className="mt-4 rounded-xl border p-4 text-sm">
+                            <strong>Project notes</strong>
+                            <p className="mt-2 leading-6 text-[#626a73]">
+                              {quote.notes}
+                            </p>
+                          </div>
+                        )}
+                        <div className="mt-5 flex flex-wrap gap-3">
+                          {canRespond && (
+                            <>
+                              <Button
+                                className="rounded-full bg-[#24764c]"
+                                onClick={() => {
+                                  respondToQuote(quote.id, "Accepted");
+                                  setMessage(
+                                    `${quote.id} was accepted. The admin status has been updated.`,
+                                  );
+                                }}
+                              >
+                                Accept quote
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="rounded-full"
+                                onClick={() => {
+                                  respondToQuote(quote.id, "Declined");
+                                  setMessage(
+                                    `${quote.id} was declined. The admin status has been updated.`,
+                                  );
+                                }}
+                              >
+                                Decline quote
+                              </Button>
+                            </>
+                          )}
+                          {canCheckout ? (
+                            <Button
+                              className="rounded-full bg-[#d96b36]"
+                              onClick={() => {
+                                if (addQuoteToCart(quote.id))
+                                  router.push("/cart");
+                              }}
+                            >
+                              Proceed to payment
+                            </Button>
+                          ) : quote.status === "Accepted" ? (
+                            <span className="inline-flex items-center gap-2 rounded-full bg-[#fff8e9] px-4 py-2 text-sm font-semibold text-[#805519]">
+                              <Clock3 className="size-4" /> Waiting for artwork
+                              approval
+                            </span>
+                          ) : null}
+                          {canCheckout && (
+                            <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#24764c]">
+                              <FileCheck2 className="size-4" /> Quote and
+                              artwork approved
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {artwork && (
+                        <ArtworkAsset
+                          artworkKey={artwork.artworkKey}
+                          filename={artwork.filename}
+                          compact
+                        />
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>

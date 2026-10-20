@@ -42,6 +42,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/page-primitives";
 import { useDemo } from "@/components/store/demo-provider";
+import { ArtworkAsset } from "@/components/artwork-asset";
 import type { Fitment, FitmentStatus, Product } from "@/lib/demo-data";
 
 const chartLoader = (
@@ -1265,6 +1266,10 @@ export function AdminQuotesArtwork() {
                 Production readiness: {selectedArtwork.readiness}
               </p>
             </div>
+            <ArtworkAsset
+              artworkKey={selectedArtwork.artworkKey}
+              filename={selectedArtwork.filename}
+            />
             <div>
               <Label>Proof action</Label>
               <Select
@@ -1322,6 +1327,12 @@ function QuoteDialog({
     config: string;
     status: string;
     amount: number | null;
+    email?: string;
+    company?: string;
+    notes?: string;
+    requestedTiming?: string;
+    filename?: string;
+    artworkId?: string;
   };
   onClose: () => void;
   onSave: (amount: number | null, status: string) => void;
@@ -1341,6 +1352,35 @@ function QuoteDialog({
             {quote.product} · {quote.config} · Quantity {quote.qty}
           </DialogDescription>
         </DialogHeader>
+        <dl className="grid gap-3 rounded-xl bg-[#f4f5f5] p-4 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-[#626a73]">Email</dt>
+            <dd className="font-semibold">{quote.email || "Not recorded"}</dd>
+          </div>
+          <div>
+            <dt className="text-[#626a73]">Company</dt>
+            <dd className="font-semibold">{quote.company || "Not provided"}</dd>
+          </div>
+          <div>
+            <dt className="text-[#626a73]">Artwork</dt>
+            <dd className="font-semibold">
+              {quote.filename || "Not supplied"}
+              {quote.artworkId ? ` · ${quote.artworkId}` : ""}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[#626a73]">Requested timing</dt>
+            <dd className="font-semibold">
+              {quote.requestedTiming || "Not specified"}
+            </dd>
+          </div>
+          {quote.notes && (
+            <div className="sm:col-span-2">
+              <dt className="text-[#626a73]">Project notes</dt>
+              <dd className="mt-1 leading-6">{quote.notes}</dd>
+            </div>
+          )}
+        </dl>
         <AdminField
           label="Demo quote amount"
           value={amount}
@@ -1373,9 +1413,16 @@ function QuoteDialog({
             Cancel
           </Button>
           <Button
-            onClick={() => onSave(amount ? Number(amount) : null, status)}
+            onClick={() => {
+              const value = amount ? Number(amount) : null;
+              const nextStatus =
+                value && ["Submitted", "Under Review"].includes(status)
+                  ? "Quoted"
+                  : status;
+              onSave(value, nextStatus);
+            }}
           >
-            Save quote
+            Save and send quote
           </Button>
         </DialogFooter>
       </DialogContent>

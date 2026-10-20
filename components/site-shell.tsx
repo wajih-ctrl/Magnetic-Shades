@@ -116,7 +116,10 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
               className="hidden rounded-full sm:inline-flex"
               asChild
             >
-              <Link href="/demo-access" aria-label="Account and demo roles">
+              <Link
+                href="/account/quotes"
+                aria-label="Customer account and quotes"
+              >
                 <UserRound className="size-4" />
               </Link>
             </Button>
@@ -284,7 +287,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
                     <Link href="/contact">Help</Link>
                   </Button>
                   <Button variant="ghost" className="justify-start" asChild>
-                    <Link href="/orders/status">Account / orders</Link>
+                    <Link href="/account/quotes">Account / quotes</Link>
                   </Button>
                   <Button variant="ghost" className="justify-start" asChild>
                     <Link href="/admin">Admin demo</Link>

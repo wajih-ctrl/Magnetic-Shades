@@ -105,6 +105,7 @@ export type CartItem = {
   price: number;
   meta: string;
   image: string;
+  quoteId?: string;
   shadeConfiguration?: {
     vehicle: DemoState["vehicle"];
     zones: string[];
@@ -144,6 +145,17 @@ export type Quote = {
   date: string;
   status: string;
   amount: number | null;
+  email?: string;
+  company?: string;
+  notes?: string;
+  requestedTiming?: string;
+  artworkId?: string;
+  artworkKey?: string;
+  filename?: string;
+  productSku?: string;
+  material?: string;
+  size?: string;
+  customerResponseAt?: string;
 };
 export type Artwork = {
   id: string;
@@ -153,6 +165,9 @@ export type Artwork = {
   proof: number;
   status: string;
   readiness: string;
+  artworkKey?: string;
+  quoteId?: string;
+  config?: string;
 };
 
 export const categories = [
@@ -1245,6 +1260,10 @@ export const seedQuotes: Quote[] = [
     date: "Oct 15, 2026",
     status: "Under Review",
     amount: null,
+    email: "studio@example.com",
+    artworkId: "ART-641",
+    filename: "northline-mark.pdf",
+    productSku: "MS-SP-2436",
   },
   {
     id: "QT-2074",
@@ -1255,6 +1274,10 @@ export const seedQuotes: Quote[] = [
     date: "Oct 13, 2026",
     status: "Quoted",
     amount: 264,
+    email: "orders@beacon.example",
+    artworkId: "ART-638",
+    filename: "beacon-coffee.png",
+    productSku: "MS-FM-1824",
   },
 ];
 
@@ -1267,6 +1290,8 @@ export const seedArtwork: Artwork[] = [
     proof: 1,
     status: "Awaiting Review",
     readiness: "Blocked",
+    quoteId: "QT-2081",
+    config: "24 × 36 in · High-tack magnetic",
   },
   {
     id: "ART-638",
@@ -1276,6 +1301,8 @@ export const seedArtwork: Artwork[] = [
     proof: 2,
     status: "Approved",
     readiness: "Ready",
+    quoteId: "QT-2074",
+    config: "18 × 24 in · Matte",
   },
 ];
 
@@ -1369,7 +1396,7 @@ export type DemoState = {
 
 export function initialState(): DemoState {
   return {
-    version: 9,
+    version: 10,
     products: structuredClone(seedProducts),
     fitments: structuredClone(seedFitments),
     orders: structuredClone(seedOrders),

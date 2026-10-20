@@ -1248,8 +1248,16 @@ export function ArtworkPage() {
         });
         return;
       }
+      url = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      artworkKey = crypto.randomUUID();
+      await artworkStore(artworkKey, url);
       if (seq !== uploadSequence.current) return;
-      setPreviewUrl(url);
+      setPreviewUrl("");
       setSign({
         artworkKey,
         filename: file.name,
